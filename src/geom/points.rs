@@ -1,0 +1,189 @@
+const ATOL: f64 = 1e-12;
+const RTOL: f64 = 1e-9;
+
+// A 2D point
+#[derive(Clone, Debug)]
+pub struct Point {
+    x: f64,
+    y: f64,
+}
+
+// Represents the direction of a turn defined by a sequence of 3 points
+#[derive(Eq, PartialEq, Debug)]
+pub enum TurnDirection {
+    Right,
+    Left,
+    InLine,
+}
+
+impl Point {
+    // Instantiate a new point
+    pub fn new(x: f64, y: f64) -> Self {
+        Self { x, y }
+    }
+
+    // Return true if the point is greater than the other lexicographically
+    pub fn gt_lex(&self, other: &Point) -> bool {
+        self.x > other.x || (self.x == other.x && self.y > other.y)
+    }
+
+    // Return true if the point is smaller than the other lexicographically
+    pub fn lt_lex(&self, other: &Point) -> bool {
+        other.gt_lex(self)
+    }
+
+    // Return the L2 distance to another point
+    pub fn l2_distance(&self, other: &Point) -> f64 {
+        let dx = self.x - other.x;
+        let dy = self.y - other.y;
+
+        (dx * dx + dy * dy).sqrt()
+    }
+
+    // Return true if the point is close to the other (within 10^-10 - relative)
+    pub fn is_close(&self, other: &Point) -> bool {
+        close(self.x, other.x, RTOL, ATOL) && close(self.y, other.y, RTOL, ATOL)
+    }
+}
+
+// Determine the turn direction defined by three successive points
+pub fn direction(p1: &Point, p2: &Point, p3: &Point) -> TurnDirection {
+    let det = (p2.x * p3.y) - (p2.y * p3.x) - (p1.x * p3.y) + (p1.y * p3.x) + (p1.x * p2.y)
+        - (p1.y * p3.x);
+    if det < 0.0 {
+        TurnDirection::Right
+    } else if det == 0.0 {
+        // TODO: This sould be defined by some small tolerance on the absolute value for
+        // robustness, perhaps
+        TurnDirection::InLine
+    } else {
+        TurnDirection::Left
+    }
+}
+
+// Return whether two numbers are close with the given absolute and relative tolerances
+fn close(a: f64, b: f64, rtol: f64, atol: f64) -> bool {
+    assert!(rtol >= 0.0 && atol >= 0.0);
+    let scale = a.abs().max(b.abs());
+    (a - b).abs() < (atol + rtol * scale)
+}
+
+// Sort a vector of points lexicographically
+pub fn sort_lex(mut pts: Vec<Point>) -> Vec<Point> {
+    quick_sort(&mut pts);
+    pts
+}
+
+// Quick-sort a slice of points in place lexicographically
+pub fn quick_sort(pts: &mut [Point]) {
+    if pts.len() <= 1 {
+        return;
+    }
+
+    let li = pts.len() - 1;
+
+    // Choose middle element as pivot and move to end as placeholder
+    pts.swap(pts.len() / 2, li);
+
+    // Partition
+    let mut nxt_pivot = 0;
+    for i in 0..li {
+        if pts[i].lt_lex(&pts[li]) {
+            pts.swap(i, nxt_pivot);
+            nxt_pivot += 1;
+        }
+    }
+    pts.swap(li, nxt_pivot);
+
+    quick_sort(&mut pts[0..nxt_pivot]);
+
+    if nxt_pivot < li {
+        quick_sort(&mut pts[nxt_pivot + 1..]);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use rand::rng;
+    use rand::seq::SliceRandom;
+
+    #[test]
+    fn test_lex_comparison() {
+        let p1 = Point { x: 0.5, y: 1.2 };
+        let p2 = Point { x: 0.2, y: 1.2 };
+
+        assert!(!p1.lt_lex(&p2));
+        assert!(p1.gt_lex(&p2));
+
+        let p3 = Point { x: -0.1, y: 0.1 };
+        let p4 = Point { x: -0.1, y: 0.4 };
+
+        assert!(!p3.gt_lex(&p4));
+        assert!(p3.lt_lex(&p4));
+
+        assert!(!p3.gt_lex(&p3));
+    }
+
+    #[test]
+    fn test_direction() {
+        let p1 = Point::new(0.0, 0.0);
+        let p2 = Point::new(0.0, 1.0);
+        let p3 = Point::new(1.0, 1.0);
+
+        assert_eq!(direction(&p1, &p2, &p3), TurnDirection::Right);
+        assert_eq!(direction(&p1, &p3, &p2), TurnDirection::Left);
+
+        let p4 = Point::new(0.0, 2.0);
+        assert_eq!(direction(&p1, &p2, &p4), TurnDirection::InLine);
+    }
+
+    #[test]
+    fn test_close_pts() {
+        let p1 = Point::new(20.0, 20.0);
+        let p2 = Point::new(20.0 + 1e-7, 20.0);
+        let p3 = Point::new(20.0 + 1e-12, 20.0 - 1e-12);
+
+        assert!(!p1.is_close(&p2));
+        assert!(p1.is_close(&p3));
+    }
+
+    #[test]
+    fn test_sort_points() {
+        let pts1 = vec![
+            Point::new(0.0, 1.0),
+            Point::new(-1.0, 1.0),
+            Point::new(0.0, 0.5),
+        ];
+        let pts2 = vec![
+            Point::new(-1.0, 1.0),
+            Point::new(0.0, 0.5),
+            Point::new(0.0, 1.0),
+        ];
+        let sorted1 = sort_lex(pts1);
+
+        for (p1, p2) in sorted1.iter().zip(pts2.iter()) {
+            assert_eq!(p1.x, p2.x);
+            assert_eq!(p1.y, p2.y);
+        }
+
+        let mut random = rng();
+        let mut pts3 = Vec::new();
+        for i in 0..4 {
+            for j in 4..8 {
+                pts3.push(Point::new(i as f64, j as f64));
+            }
+        }
+        pts3.shuffle(&mut random);
+
+        let sorted3 = sort_lex(pts3);
+        for i in 0..16 {
+            let pt = &sorted3[i];
+            let x = (i / 4) as f64;
+            let y = (i % 4 + 4) as f64;
+
+            assert_eq!((x, y), (pt.x, pt.y));
+        }
+    }
+}
