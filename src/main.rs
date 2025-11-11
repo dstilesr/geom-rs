@@ -3,5 +3,6 @@
 pub mod geom;
 
 fn main() {
-    println!("Hello, world!");
+    let num: f64 = 345.78;
+    println!("Hello, world! {}", num.sqrt());
 }

@@ -1,3 +1,4 @@
+use super::geom_object::GeometricObject;
 use super::points::*;
 
 // Represents a polygon
@@ -22,6 +23,21 @@ impl Polygon {
             ));
         }
         Ok(Self { points: pts })
+    }
+}
+
+impl GeometricObject for Polygon {
+    // WKT representation of the polygon
+    fn wkt(&self) -> String {
+        let mut outer_ring = String::new();
+        outer_ring.push_str("(");
+        for pt in &self.points {
+            let (x, y) = pt.coords();
+            outer_ring.push_str(&format!("{} {}, ", x, y));
+        }
+        let stripped = outer_ring.strip_suffix(", ").unwrap();
+
+        format!("POLYGON(({}))", stripped)
     }
 }
 

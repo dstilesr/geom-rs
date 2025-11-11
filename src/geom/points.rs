@@ -1,3 +1,5 @@
+use super::geom_object::GeometricObject;
+
 const ATOL: f64 = 1e-12;
 const RTOL: f64 = 1e-9;
 
@@ -48,6 +50,13 @@ impl Point {
     // Get coordinates as a tuple
     pub fn coords(&self) -> (f64, f64) {
         (self.x, self.y)
+    }
+}
+
+impl GeometricObject for Point {
+    // WKT representation of the point
+    fn wkt(&self) -> String {
+        format!("POINT ({} {})", self.x, self.y)
     }
 }
 
