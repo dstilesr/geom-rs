@@ -3,6 +3,14 @@ name = "geom-rs"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "geom-rs"
+path = "src/lib.rs"
+
+[[bin]]
+name = "geom-rs"
+path = "src/main.rs"
+
 [dependencies]
 log = "0.4.28"
 regex = "1.12.2"
