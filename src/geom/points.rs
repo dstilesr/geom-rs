@@ -10,7 +10,7 @@ pub struct Point {
 
 // Represents the direction of a turn defined by a sequence of 3 points
 #[derive(Eq, PartialEq, Debug)]
-pub enum TurnDirection {
+pub enum Turn {
     Right,
     Left,
     InLine,
@@ -40,24 +40,29 @@ impl Point {
         (dx * dx + dy * dy).sqrt()
     }
 
-    // Return true if the point is close to the other (within 10^-10 - relative)
+    // Return true if the point is approximately equal to other
     pub fn is_close(&self, other: &Point) -> bool {
         close(self.x, other.x, RTOL, ATOL) && close(self.y, other.y, RTOL, ATOL)
+    }
+
+    // Get coordinates as a tuple
+    pub fn coords(&self) -> (f64, f64) {
+        (self.x, self.y)
     }
 }
 
 // Determine the turn direction defined by three successive points
-pub fn direction(p1: &Point, p2: &Point, p3: &Point) -> TurnDirection {
+pub fn direction(p1: &Point, p2: &Point, p3: &Point) -> Turn {
     let det = (p2.x * p3.y) - (p2.y * p3.x) - (p1.x * p3.y) + (p1.y * p3.x) + (p1.x * p2.y)
-        - (p1.y * p3.x);
+        - (p1.y * p2.x);
     if det < 0.0 {
-        TurnDirection::Right
+        Turn::Right
     } else if det == 0.0 {
         // TODO: This sould be defined by some small tolerance on the absolute value for
         // robustness, perhaps
-        TurnDirection::InLine
+        Turn::InLine
     } else {
-        TurnDirection::Left
+        Turn::Left
     }
 }
 
@@ -132,11 +137,11 @@ mod tests {
         let p2 = Point::new(0.0, 1.0);
         let p3 = Point::new(1.0, 1.0);
 
-        assert_eq!(direction(&p1, &p2, &p3), TurnDirection::Right);
-        assert_eq!(direction(&p1, &p3, &p2), TurnDirection::Left);
+        assert_eq!(direction(&p1, &p2, &p3), Turn::Right);
+        assert_eq!(direction(&p1, &p3, &p2), Turn::Left);
 
         let p4 = Point::new(0.0, 2.0);
-        assert_eq!(direction(&p1, &p2, &p4), TurnDirection::InLine);
+        assert_eq!(direction(&p1, &p2, &p4), Turn::InLine);
     }
 
     #[test]
