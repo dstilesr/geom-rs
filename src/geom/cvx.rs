@@ -29,7 +29,7 @@ pub fn convex_hull(points: &Vec<Point>) -> Option<Polygon> {
 
 // Compute half a convex hull from a lexicographically sorted vector of points
 fn half_hull(points: Iter<Point>) -> Vec<Point> {
-    let mut hull = Vec::new();
+    let mut hull = Vec::with_capacity(points.len());
 
     for (i, pt) in points.enumerate() {
         if i < 2 {
