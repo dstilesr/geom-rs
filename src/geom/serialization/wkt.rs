@@ -367,7 +367,7 @@ mod tests {
             panic!("Parsed invalid polygon (wrong parenthesis count)!");
         }
 
-        if let Ok(_) = parse_wkt(String::from("POLYGON(0 0, 1 0, 1 1, 0 1)")) {
+        if let Ok(_) = parse_wkt(String::from("POLYGON((0 0, 1 0, 1 1, 0 1))")) {
             panic!("Parsed invalid polygon (not closed)!");
         }
 
