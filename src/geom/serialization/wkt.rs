@@ -135,7 +135,7 @@ fn parse_polygon(raw_str: &str) -> Result<Polygon, String> {
 
 #[cfg(test)]
 mod tests {
-    use crate::geom::cvx::convex_hull;
+    use super::cvx::convex_hull;
 
     use super::*;
     use rand::{Rng, rng};
@@ -331,12 +331,12 @@ mod tests {
     fn test_parse_polygon_valid() {
         match parse_wkt(String::from("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))")) {
             Ok(GeomWrapper::Polygon(poly)) => {
-                assert_eq!(poly.points.len(), 5);
-                assert!(poly.points[0].is_close(&Point::new(0.0, 0.0)));
-                assert!(poly.points[1].is_close(&Point::new(0.0, 1.0)));
-                assert!(poly.points[2].is_close(&Point::new(1.0, 1.0)));
-                assert!(poly.points[3].is_close(&Point::new(1.0, 0.0)));
-                assert!(poly.points[4].is_close(&Point::new(0.0, 0.0)));
+                assert_eq!(poly.outer.len(), 5);
+                assert!(poly.outer[0].is_close(&Point::new(0.0, 0.0)));
+                assert!(poly.outer[1].is_close(&Point::new(0.0, 1.0)));
+                assert!(poly.outer[2].is_close(&Point::new(1.0, 1.0)));
+                assert!(poly.outer[3].is_close(&Point::new(1.0, 0.0)));
+                assert!(poly.outer[4].is_close(&Point::new(0.0, 0.0)));
             }
             Ok(_) => panic!("Expected a polygon!"),
             Err(err) => panic!("Unable to parse polygon: {err}"),
@@ -350,12 +350,12 @@ mod tests {
         match parse_wkt(hull.wkt()) {
             Err(err) => panic!("Could not parse random polygon: {err}"),
             Ok(GeomWrapper::Polygon(poly)) => {
-                for pt in &poly.points {
+                for pt in &poly.outer {
                     let (x, y) = pt.coords();
                     assert!(0.0 <= x && x <= 1.0);
                     assert!(0.0 <= y && y <= 1.0);
                 }
-                assert!(poly.points[0].is_close(&poly.points[poly.points.len() - 1]))
+                assert!(poly.outer[0].is_close(&poly.outer[poly.outer.len() - 1]))
             }
             Ok(_) => panic!("Expected polygon!"),
         }

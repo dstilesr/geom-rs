@@ -66,12 +66,12 @@ mod tests {
 
         let hull = convex_hull(&points);
         if let Some(poly) = hull {
-            assert_eq!(poly.points.len(), 5);
+            assert_eq!(poly.outer.len(), 5);
 
-            assert_eq!(poly.points[0].coords(), (0.0, 0.0));
-            assert_eq!(poly.points[1].coords(), (0.0, 1.0));
-            assert_eq!(poly.points[2].coords(), (1.0, 1.0));
-            assert_eq!(poly.points[3].coords(), (1.0, 0.0));
+            assert_eq!(poly.outer[0].coords(), (0.0, 0.0));
+            assert_eq!(poly.outer[1].coords(), (0.0, 1.0));
+            assert_eq!(poly.outer[2].coords(), (1.0, 1.0));
+            assert_eq!(poly.outer[3].coords(), (1.0, 0.0));
         } else {
             panic!("Failed to instantiate convex hull!");
         }
@@ -89,7 +89,7 @@ mod tests {
         let hull = convex_hull(&raw_pts);
         match hull {
             Some(poly) => {
-                assert!(poly.points.len() <= (total_points + 1));
+                assert!(poly.outer.len() <= (total_points + 1));
             }
             None => panic!("Could not instantiate convex hull of random points"),
         }

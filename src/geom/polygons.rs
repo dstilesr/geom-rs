@@ -4,7 +4,7 @@ use super::points::*;
 // Represents a polygon
 #[derive(Debug)]
 pub struct Polygon {
-    pub points: Vec<Point>,
+    pub outer: Vec<Point>,
     // TODO -  add inner rings
 }
 
@@ -23,22 +23,22 @@ impl Polygon {
                 pts[pts.len() - 1].coords(),
             ));
         }
-        Ok(Self { points: pts })
+        Ok(Self { outer: pts })
     }
 
     // Use Ray Tracing to determine if a point lies in the polygon
     pub fn contains(&self, pt: &Point) -> bool {
         let mut total_intersects: u32 = 0;
         let (p_x, p_y) = pt.coords();
-        for seg_start in 0..self.points.len() {
-            let seg_end = (seg_start + 1) % self.points.len();
-            let (st_x, st_y) = self.points[seg_start].coords();
-            let (e_x, e_y) = self.points[seg_end].coords();
+        for seg_start in 0..self.outer.len() {
+            let seg_end = (seg_start + 1) % self.outer.len();
+            let (st_x, st_y) = self.outer[seg_start].coords();
+            let (e_x, e_y) = self.outer[seg_end].coords();
 
             if st_x < p_x && e_x < p_x {
                 // Horizontal ray does not intersect edge
                 continue;
-            } else if pt.is_close(&self.points[seg_end]) || pt.is_close(&self.points[seg_start]) {
+            } else if pt.is_close(&self.outer[seg_end]) || pt.is_close(&self.outer[seg_start]) {
                 // Edge case - point is vertex
                 return true;
             } else if p_y == st_y && p_y == e_y {
@@ -59,7 +59,7 @@ impl GeometricObject for Polygon {
     // WKT representation of the polygon
     fn wkt(&self) -> String {
         let mut outer_ring = String::new();
-        for pt in &self.points {
+        for pt in &self.outer {
             let (x, y) = pt.coords();
             outer_ring.push_str(&format!("{} {}, ", x, y));
         }
