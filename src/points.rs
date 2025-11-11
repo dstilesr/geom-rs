@@ -3,14 +3,20 @@ use super::geom_object::GeometricObject;
 const ATOL: f64 = 1e-12;
 const RTOL: f64 = 1e-9;
 
-// A 2D point
+/// A single Point on the Plane (2D)
+///
+/// Examples
+/// ```rust
+/// let my_point = Point::new(0.2, -7.9);
+/// let (x, y) = my_point.coords();
+/// ```
 #[derive(Clone, Debug)]
 pub struct Point {
     x: f64,
     y: f64,
 }
 
-// Represents the direction of a turn defined by a sequence of 3 points
+/// Represents the direction of a turn defined by a sequence of 3 points on the plane
 #[derive(Eq, PartialEq, Debug)]
 pub enum Turn {
     Right,
@@ -19,22 +25,22 @@ pub enum Turn {
 }
 
 impl Point {
-    // Instantiate a new point
+    /// Instantiate a new point
     pub fn new(x: f64, y: f64) -> Self {
         Self { x, y }
     }
 
-    // Return true if the point is greater than the other lexicographically
+    /// Return true if the point is greater than the other lexicographically
     pub fn gt_lex(&self, other: &Point) -> bool {
         self.x > other.x || (self.x == other.x && self.y > other.y)
     }
 
-    // Return true if the point is smaller than the other lexicographically
+    /// Return true if the point is smaller than the other lexicographically
     pub fn lt_lex(&self, other: &Point) -> bool {
         other.gt_lex(self)
     }
 
-    // Return the L2 distance to another point
+    /// Return the L2 (Euclidean) distance to another point
     pub fn l2_distance(&self, other: &Point) -> f64 {
         let dx = self.x - other.x;
         let dy = self.y - other.y;
@@ -42,25 +48,25 @@ impl Point {
         (dx * dx + dy * dy).sqrt()
     }
 
-    // Return true if the point is approximately equal to other
+    /// Return true if the point is approximately equal to other.
     pub fn is_close(&self, other: &Point) -> bool {
         close(self.x, other.x, RTOL, ATOL) && close(self.y, other.y, RTOL, ATOL)
     }
 
-    // Get coordinates as a tuple
+    /// Get coordinates as a tuple
     pub fn coords(&self) -> (f64, f64) {
         (self.x, self.y)
     }
 }
 
 impl GeometricObject for Point {
-    // WKT representation of the point
+    /// WKT representation of the point
     fn wkt(&self) -> String {
         format!("POINT ({} {})", self.x, self.y)
     }
 }
 
-// Determine the turn direction defined by three successive points
+/// Determine the turn direction defined by three successive points
 pub fn direction(p1: &Point, p2: &Point, p3: &Point) -> Turn {
     let det = (p2.x * p3.y) - (p2.y * p3.x) - (p1.x * p3.y) + (p1.y * p3.x) + (p1.x * p2.y)
         - (p1.y * p2.x);
@@ -82,13 +88,13 @@ fn close(a: f64, b: f64, rtol: f64, atol: f64) -> bool {
     (a - b).abs() < (atol + rtol * scale)
 }
 
-// Sort a vector of points lexicographically
+/// Sort a vector of points lexicographically
 pub fn sort_lex(mut pts: Vec<Point>) -> Vec<Point> {
     quick_sort(&mut pts);
     pts
 }
 
-// Quick-sort a slice of points in place lexicographically
+/// Quick-sort a slice of points in-place lexicographically
 pub fn quick_sort(pts: &mut [Point]) {
     if pts.len() <= 1 {
         return;

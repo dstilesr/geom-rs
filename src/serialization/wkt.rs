@@ -9,7 +9,7 @@ static COORD_PAIR_RE: OnceLock<Regex> = OnceLock::new();
 static GEOM_TYPE_RE: OnceLock<Regex> = OnceLock::new();
 
 #[derive(Debug)]
-pub enum GeomType {
+enum GeomType {
     Polygon,
     Point,
     LineString,
@@ -26,7 +26,16 @@ fn geom_type_re() -> &'static Regex {
     GEOM_TYPE_RE.get_or_init(|| Regex::new(GEOM_TYPE).unwrap())
 }
 
-// Parse a WKT string and return the parsed geometry object
+/// Parse a WKT string and return the parsed geometry object
+///
+/// The function takes a Geometry in WKT format and returns a GeomWrapper
+/// containing the actual geometry. Returns an error if parsing failed.
+///
+/// Examples
+/// ```rust
+/// // Instantiate a point from string
+/// let GemWrapper::Point(pt) = parse_wkt(String::from("POINT (0 0)")).unwrap();
+/// ```
 pub fn parse_wkt(raw_str: String) -> Result<GeomWrapper, String> {
     match identify_type(&raw_str) {
         Err(s) => Err(s),

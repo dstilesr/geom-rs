@@ -4,7 +4,24 @@ use super::points::*;
 use super::polygons::*;
 use log;
 
-// Compute the convex hull of a set of points
+/// Compute the convex hull of a set of points.
+///
+/// Given a vector of points, return the convex hull of the set of points. Returns
+/// None if there are less than 3 points or the convex hull could not be computed.
+///
+/// Examples
+/// ```rust
+/// let points = vec![
+///    Point::new(0.05, 0.75),
+///    Point::new(0.0, 0.0),
+///    Point::new(1.0, 1.0),
+///    Point::new(1.0, 0.0),
+///    Point::new(0.0, 1.0),
+///    Point::new(0.5, 0.5),
+///    Point::new(0.25, 0.25),
+/// ];
+/// let square: Polygon = convex_hull(&points).unwrap();
+/// ```
 pub fn convex_hull(points: &Vec<Point>) -> Option<Polygon> {
     if points.len() < 3 {
         return None;

@@ -56,7 +56,7 @@ impl Polygon {
 }
 
 impl GeometricObject for Polygon {
-    // WKT representation of the polygon
+    /// WKT representation of the polygon
     fn wkt(&self) -> String {
         let mut outer_ring = String::new();
         for pt in &self.outer {
