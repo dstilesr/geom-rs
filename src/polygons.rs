@@ -1,7 +1,7 @@
 use super::geom_object::GeometricObject;
 use super::points::*;
 
-// Represents a polygon
+/// Represents a polygon on the Plane
 #[derive(Debug)]
 pub struct Polygon {
     pub outer: Vec<Point>,
@@ -9,7 +9,7 @@ pub struct Polygon {
 }
 
 impl Polygon {
-    // Instantiate a polygon from a vector of points
+    /// Instantiate a polygon from a vector of points
     pub fn from_points(pts: Vec<Point>) -> Result<Self, String> {
         if pts.len() < 4 {
             return Err(format!(
@@ -26,7 +26,7 @@ impl Polygon {
         Ok(Self { outer: pts })
     }
 
-    // Use Ray Tracing to determine if a point lies in the polygon
+    /// Use Ray Tracing to determine if a point lies in the polygon
     pub fn contains(&self, pt: &Point) -> bool {
         let mut total_intersects: u32 = 0;
         let (p_x, p_y) = pt.coords();

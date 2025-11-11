@@ -11,6 +11,8 @@ use log;
 ///
 /// Examples
 /// ```rust
+/// use geom;
+/// use geom::{Polygon, Point};
 /// let points = vec![
 ///    Point::new(0.05, 0.75),
 ///    Point::new(0.0, 0.0),
@@ -20,7 +22,7 @@ use log;
 ///    Point::new(0.5, 0.5),
 ///    Point::new(0.25, 0.25),
 /// ];
-/// let square: Polygon = convex_hull(&points).unwrap();
+/// let square: Polygon = geom::convex_hull(&points).unwrap();
 /// ```
 pub fn convex_hull(points: &Vec<Point>) -> Option<Polygon> {
     if points.len() < 3 {

@@ -7,6 +7,7 @@ const RTOL: f64 = 1e-9;
 ///
 /// Examples
 /// ```rust
+/// use geom::Point;
 /// let my_point = Point::new(0.2, -7.9);
 /// let (x, y) = my_point.coords();
 /// ```
@@ -14,6 +15,12 @@ const RTOL: f64 = 1e-9;
 pub struct Point {
     x: f64,
     y: f64,
+}
+
+/// A simple collection of points
+#[derive(Debug)]
+pub struct MultiPoint {
+    pub points: Vec<Point>,
 }
 
 /// Represents the direction of a turn defined by a sequence of 3 points on the plane
@@ -56,6 +63,33 @@ impl Point {
     /// Get coordinates as a tuple
     pub fn coords(&self) -> (f64, f64) {
         (self.x, self.y)
+    }
+}
+
+impl MultiPoint {
+    /// Instantiate a multipoint collection
+    ///
+    /// Example
+    /// ```rust
+    /// use geom::{MultiPoint, Point};
+    /// let my_points = MultiPoint::new(vec![Point::new(0.0, 0.0), Point::new(0.0, 1.0)]);
+    /// ```
+    pub fn new(pts: Vec<Point>) -> Self {
+        Self { points: pts }
+    }
+}
+
+impl GeometricObject for MultiPoint {
+    /// WKT representation of the multipoint collection
+    fn wkt(&self) -> String {
+        let mut out = String::from("MULTIPOINT(");
+        for pt in &self.points {
+            let (x, y) = pt.coords();
+            out.push_str(&format!("{} {}, ", x, y));
+        }
+        out = out.strip_suffix(", ").unwrap().to_string();
+        out.push(')');
+        out
     }
 }
 

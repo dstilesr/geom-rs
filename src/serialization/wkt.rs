@@ -33,8 +33,22 @@ fn geom_type_re() -> &'static Regex {
 ///
 /// Examples
 /// ```rust
+/// use geom;
+/// use geom::serialization;
+/// use geom::serialization::GeomWrapper;
+/// use geom::{Polygon, Point};
+///
 /// // Instantiate a point from string
-/// let GemWrapper::Point(pt) = parse_wkt(String::from("POINT (0 0)")).unwrap();
+/// if let Ok(GeomWrapper::Point(pt)) = serialization::parse_wkt(String::from("POINT (0 0)")) {
+///     println!("My point is: {pt:?}");
+/// }
+///
+/// // Instantiate a polygon
+/// match serialization::parse_wkt(String::from("POLYGON((0 0, 0 1, 1 1, 0 0))")) {
+///     Ok(GeomWrapper::Polygon(poly)) => println!("I got a polygon! {poly:?}"),
+///     Ok(_) => println!("This is weird..."),
+///     _ => panic!("Failed"),
+/// }
 /// ```
 pub fn parse_wkt(raw_str: String) -> Result<GeomWrapper, String> {
     match identify_type(&raw_str) {
