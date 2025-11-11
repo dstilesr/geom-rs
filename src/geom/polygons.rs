@@ -2,6 +2,7 @@ use super::geom_object::GeometricObject;
 use super::points::*;
 
 // Represents a polygon
+#[derive(Debug)]
 pub struct Polygon {
     pub points: Vec<Point>,
     // TODO -  add inner rings

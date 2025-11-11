@@ -12,14 +12,16 @@ static GEOM_TYPE_RE: OnceLock<Regex> = OnceLock::new();
 pub enum GeomType {
     Polygon,
     Point,
+    LineString,
+    MultiPoint,
 }
 
-// Get coordinate pair regex - once to avoid recompilation (thread-safe)
+// Get coordinate pair regex once to avoid recompilation (thread-safe)
 fn coord_pair_re() -> &'static Regex {
     COORD_PAIR_RE.get_or_init(|| Regex::new(COORD_PAIR).unwrap())
 }
 
-// Get geometry type regex - once to avoid recompilation (thread-safe)
+// Get geometry type regex once to avoid recompilation (thread-safe)
 fn geom_type_re() -> &'static Regex {
     GEOM_TYPE_RE.get_or_init(|| Regex::new(GEOM_TYPE).unwrap())
 }
@@ -27,8 +29,13 @@ fn geom_type_re() -> &'static Regex {
 // Parse a WKT string and return the parsed geometry object
 pub fn parse_wkt(raw_str: String) -> Result<GeomWrapper, String> {
     match identify_type(&raw_str) {
+        Err(s) => Err(s),
         Ok((GeomType::Point, n)) => match parse_point(&raw_str[n..]) {
             Ok(pt) => Ok(GeomWrapper::Point(pt)),
+            Err(s) => Err(s),
+        },
+        Ok((GeomType::Polygon, n)) => match parse_polygon(&raw_str[n..]) {
+            Ok(poly) => Ok(GeomWrapper::Polygon(poly)),
             Err(s) => Err(s),
         },
         _ => Err(String::from("Not implemented")),
@@ -106,10 +113,43 @@ fn parse_coordinate_list(raw_str: &str) -> Result<(Vec<Point>, usize), String> {
     Ok((pts, end_idx + 1))
 }
 
+// Parse a polygon from the given wkt string with type prefix removed
+fn parse_polygon(raw_str: &str) -> Result<Polygon, String> {
+    if !raw_str.starts_with("(") {
+        return Err(String::from("Expected '(' to start coordinate lists"));
+    }
+    match parse_coordinate_list(&raw_str[1..]) {
+        Err(err) => Err(err),
+        Ok((points, end)) => {
+            let suffix_trim = raw_str[1 + end..].trim();
+            if (!suffix_trim.starts_with(")")) || suffix_trim.len() != 1 {
+                return Err(String::from("Expected ')' to close polygon"));
+            }
+            match Polygon::from_points(points) {
+                Err(err) => Err(err),
+                Ok(poly) => Ok(poly),
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::geom::cvx::convex_hull;
+
     use super::*;
     use rand::{Rng, rng};
+
+    // Get a vector of random points with coordinates between 0 and 1
+    fn get_random_points(total: usize) -> Vec<Point> {
+        let mut random = rng();
+        let mut points = Vec::with_capacity(total);
+
+        for _ in 0..total {
+            points.push(Point::new(random.random(), random.random()));
+        }
+        points
+    }
 
     #[test]
     fn test_identify_type_valid() {
@@ -230,12 +270,31 @@ mod tests {
 
     #[test]
     fn test_parse_coord_list_valid() {
-        let mut random = rng();
-        let mut pts = Vec::new();
+        let raw_str = "(0 1, 0.9 -2.5, 9 0.001)";
+        match parse_coordinate_list(raw_str) {
+            Err(err) => panic!("{err}"),
+            Ok((pts, n)) => {
+                assert_eq!(pts.len(), 3);
+                assert_eq!(raw_str.len(), n)
+            }
+        }
+
+        let raw_str = "(0 1, 0.9 -2.5, 9 0.001))END";
+        match parse_coordinate_list(raw_str) {
+            Err(err) => panic!("{err}"),
+            Ok((pts, n)) => {
+                assert_eq!(pts.len(), 3);
+                assert!(raw_str[n..].starts_with(")END"));
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_coord_list_random() {
+        let pts = get_random_points(12);
         let mut formatted = String::from("(");
-        for _ in 0..12 {
-            pts.push(Point::new(random.random(), random.random()));
-            let (x, y) = pts[pts.len() - 1].coords();
+        for p in &pts {
+            let (x, y) = p.coords();
             formatted.push_str(&format!("{} {},", x, y));
         }
         let mut formatted = formatted.trim_end_matches(',').to_string();
@@ -261,6 +320,67 @@ mod tests {
 
         if let Ok(_) = parse_coordinate_list("(0 -1.0, 0.0 1.98") {
             panic!("Parsed invalid coordinate list (unclosed parentheses)")
+        }
+
+        if let Ok(_) = parse_coordinate_list("0 -1.0, 0.0 1.98)") {
+            panic!("Parsed invalid coordinate list (unopened parentheses)")
+        }
+    }
+
+    #[test]
+    fn test_parse_polygon_valid() {
+        match parse_wkt(String::from("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))")) {
+            Ok(GeomWrapper::Polygon(poly)) => {
+                assert_eq!(poly.points.len(), 5);
+                assert!(poly.points[0].is_close(&Point::new(0.0, 0.0)));
+                assert!(poly.points[1].is_close(&Point::new(0.0, 1.0)));
+                assert!(poly.points[2].is_close(&Point::new(1.0, 1.0)));
+                assert!(poly.points[3].is_close(&Point::new(1.0, 0.0)));
+                assert!(poly.points[4].is_close(&Point::new(0.0, 0.0)));
+            }
+            Ok(_) => panic!("Expected a polygon!"),
+            Err(err) => panic!("Unable to parse polygon: {err}"),
+        }
+    }
+
+    #[test]
+    fn test_parse_polygon_random() {
+        let pts = get_random_points(150);
+        let hull = convex_hull(&pts).unwrap();
+        match parse_wkt(hull.wkt()) {
+            Err(err) => panic!("Could not parse random polygon: {err}"),
+            Ok(GeomWrapper::Polygon(poly)) => {
+                for pt in &poly.points {
+                    let (x, y) = pt.coords();
+                    assert!(0.0 <= x && x <= 1.0);
+                    assert!(0.0 <= y && y <= 1.0);
+                }
+                assert!(poly.points[0].is_close(&poly.points[poly.points.len() - 1]))
+            }
+            Ok(_) => panic!("Expected polygon!"),
+        }
+    }
+
+    #[test]
+    fn test_parse_polygon_invalid() {
+        if let Ok(_) = parse_wkt(String::from("POLYGON(0 0, 1 0, 1 1, 0 0)")) {
+            panic!("Parsed invalid polygon (wrong parenthesis count)!");
+        }
+
+        if let Ok(_) = parse_wkt(String::from("POLYGON(0 0, 1 0, 1 1, 0 1)")) {
+            panic!("Parsed invalid polygon (not closed)!");
+        }
+
+        if let Ok(_) = parse_wkt(String::from("POLYGON(0 0, 1 0, 0 0)")) {
+            panic!("Parsed invalid polygon (too few points)!");
+        }
+
+        if let Ok(_) = parse_wkt(String::from("POLYGON(0 0, 1 0, 1 1, 0 0))")) {
+            panic!("Parsed invalid polygon (mismatched parentheses)!");
+        }
+
+        if let Ok(_) = parse_wkt(String::from("POLYGON ((0 0, 1 0, 1 1, 0 0)")) {
+            panic!("Parsed invalid polygon (mismatched parentheses)!");
         }
     }
 }
