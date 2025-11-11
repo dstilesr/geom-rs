@@ -24,6 +24,34 @@ impl Polygon {
         }
         Ok(Self { points: pts })
     }
+
+    // Use Ray Tracing to determine if a point lies in the polygon
+    pub fn contains(&self, pt: &Point) -> bool {
+        let mut total_intersects: u32 = 0;
+        let (p_x, p_y) = pt.coords();
+        for seg_start in 0..self.points.len() {
+            let seg_end = (seg_start + 1) % self.points.len();
+            let (st_x, st_y) = self.points[seg_start].coords();
+            let (e_x, e_y) = self.points[seg_end].coords();
+
+            if st_x < p_x && e_x < p_x {
+                // Horizontal ray does not intersect edge
+                continue;
+            } else if pt.is_close(&self.points[seg_end]) || pt.is_close(&self.points[seg_start]) {
+                // Edge case - point is vertex
+                return true;
+            } else if p_y == st_y && p_y == e_y {
+                // Edge case - horizontal edge lies on ray
+                if st_x <= p_x && p_x <= e_x {
+                    return true;
+                }
+            } else if (p_y - st_y) * (p_y - e_y) < 0.0 {
+                // Intersects edge
+                total_intersects += 1;
+            }
+        }
+        total_intersects % 2 != 0
+    }
 }
 
 impl GeometricObject for Polygon {
@@ -43,6 +71,7 @@ impl GeometricObject for Polygon {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::{Rng, rng};
 
     #[test]
     fn test_instantiation() {
@@ -84,6 +113,42 @@ mod tests {
         ];
         if let Err(_) = Polygon::from_points(square) {
             panic!("Failed to instantiate a valid polygon");
+        }
+    }
+
+    #[test]
+    fn test_contains() {
+        let poly = Polygon::from_points(vec![
+            Point::new(0.0, 0.0),
+            Point::new(0.0, 1.0),
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 0.0),
+            Point::new(0.0, 0.0),
+        ])
+        .unwrap();
+
+        assert!(poly.contains(&Point::new(0.5, 0.5)));
+        assert!(!poly.contains(&Point::new(1.5, 0.5)));
+        assert!(poly.contains(&Point::new(0.5, 1.0)));
+        assert!(poly.contains(&Point::new(0.0, 1.0)));
+    }
+
+    #[test]
+    fn test_contains_random() {
+        let mut random = rng();
+        let total_runs = 600;
+        let poly = Polygon::from_points(vec![
+            Point::new(0.0, 0.0),
+            Point::new(0.0, 1.0),
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 0.0),
+            Point::new(0.0, 0.0),
+        ])
+        .unwrap();
+
+        for _ in 0..total_runs {
+            let pt = Point::new(random.random(), random.random());
+            assert!(poly.contains(&pt));
         }
     }
 }
