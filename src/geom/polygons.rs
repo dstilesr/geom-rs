@@ -30,7 +30,6 @@ impl GeometricObject for Polygon {
     // WKT representation of the polygon
     fn wkt(&self) -> String {
         let mut outer_ring = String::new();
-        outer_ring.push_str("(");
         for pt in &self.points {
             let (x, y) = pt.coords();
             outer_ring.push_str(&format!("{} {}, ", x, y));
