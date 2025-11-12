@@ -109,6 +109,7 @@ mod tests {
         match hull {
             Some(poly) => {
                 assert!(poly.outer.len() <= (total_points + 1));
+                assert!(poly.is_convex());
             }
             None => panic!("Could not instantiate convex hull of random points"),
         }
