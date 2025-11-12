@@ -61,6 +61,10 @@ pub fn parse_wkt(raw_str: String) -> Result<GeomWrapper, String> {
             Ok(poly) => Ok(GeomWrapper::Polygon(poly)),
             Err(s) => Err(s),
         },
+        Ok((GeomType::MultiPoint, n)) => match parse_multipoint(&raw_str[n..]) {
+            Ok(mp) => Ok(GeomWrapper::MultiPoint(mp)),
+            Err(s) => Err(s),
+        },
         _ => Err(String::from("Not implemented")),
     }
 }
@@ -74,6 +78,7 @@ fn identify_type(raw: &str) -> Result<(GeomType, usize), String> {
         match trimmed {
             "POLYGON" => Ok((GeomType::Polygon, end)),
             "POINT" => Ok((GeomType::Point, end)),
+            "MULTIPOINT" => Ok((GeomType::MultiPoint, end)),
             _ => Err(format!("Unsupported Geometry: {trimmed}")),
         }
     } else {
@@ -104,6 +109,20 @@ fn parse_point(raw: &str) -> Result<Point, String> {
         ))
     } else {
         return Err(String::from("Could not parse coordinates"));
+    }
+}
+
+// Parse a list of points from a string with type prefix removed
+fn parse_multipoint(raw_str: &str) -> Result<MultiPoint, String> {
+    let trimmed = raw_str.trim();
+    match parse_coordinate_list(trimmed) {
+        Ok((pts, n)) => {
+            if trimmed[n..].len() > 0 {
+                return Err(String::from("Trailing cheracters!"));
+            }
+            Ok(MultiPoint::new(pts))
+        }
+        Err(e) => Err(e),
     }
 }
 
@@ -314,7 +333,7 @@ mod tests {
 
     #[test]
     fn test_parse_coord_list_random() {
-        let pts = get_random_points(12);
+        let pts = get_random_points(300);
         let mut formatted = String::from("(");
         for p in &pts {
             let (x, y) = p.coords();
@@ -368,7 +387,7 @@ mod tests {
 
     #[test]
     fn test_parse_polygon_random() {
-        let pts = get_random_points(150);
+        let pts = get_random_points(750);
         let hull = convex_hull(&pts).unwrap();
         match parse_wkt(hull.wkt()) {
             Err(err) => panic!("Could not parse random polygon: {err}"),
@@ -404,6 +423,53 @@ mod tests {
 
         if let Ok(_) = parse_wkt(String::from("POLYGON ((0 0, 1 0, 1 1, 0 0)")) {
             panic!("Parsed invalid polygon (mismatched parentheses)!");
+        }
+    }
+
+    #[test]
+    fn test_parse_multipoint_valid() {
+        match parse_wkt(String::from("MULTIPOINT(0 0, 1 0, 0.5 0.5, 0 1)")) {
+            Err(err) => panic!("Could not parse multipoint: {err}"),
+            Ok(GeomWrapper::MultiPoint(mp)) => {
+                assert_eq!(mp.points.len(), 4);
+                assert!(mp.points[0].is_close(&Point::new(0.0, 0.0)));
+                assert!(mp.points[1].is_close(&Point::new(1.0, 0.0)));
+                assert!(mp.points[2].is_close(&Point::new(0.5, 0.5)));
+                assert!(mp.points[3].is_close(&Point::new(0.0, 1.0)));
+            }
+            Ok(_) => panic!("Expected multipoint!"),
+        }
+    }
+
+    #[test]
+    fn test_parse_multipoint_random() {
+        let total_pts = 500;
+        let mp1 = MultiPoint::new(get_random_points(total_pts));
+        match parse_wkt(mp1.wkt()) {
+            Err(err) => panic!("Could not parse multipoint: {err}"),
+            Ok(GeomWrapper::MultiPoint(mp2)) => {
+                assert_eq!(mp2.points.len(), total_pts);
+
+                for (p, q) in mp1.points.iter().zip(mp2.points) {
+                    assert!(p.is_close(&q));
+                }
+            }
+            Ok(_) => panic!("Expected multipoint!"),
+        }
+    }
+
+    #[test]
+    fn test_parse_multipoint_invalid() {
+        if let Ok(_) = parse_wkt(String::from("MULTIPOINT((0 0, 1 0, 0.5 0.5, 0 1))")) {
+            panic!("Parsed invalid multipoint (Invalid parentheses number)!")
+        }
+
+        if let Ok(_) = parse_wkt(String::from("MULTIPOINT(0 0, 1 0, 0.5 0.5, 0 1))")) {
+            panic!("Parsed invalid multipoint (mismatched parentheses)!")
+        }
+
+        if let Ok(_) = parse_wkt(String::from("MULTIPOINT(0 0 9.0, 1 0 -1, 0.5 0.5 0.2)")) {
+            panic!("Parsed invalid multipoint (invalid dimension)!")
         }
     }
 }

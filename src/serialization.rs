@@ -8,4 +8,5 @@ pub use wkt::*;
 pub enum GeomWrapper {
     Polygon(Polygon),
     Point(Point),
+    MultiPoint(MultiPoint),
 }
