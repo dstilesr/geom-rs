@@ -12,7 +12,6 @@ static GEOM_TYPE_RE: OnceLock<Regex> = OnceLock::new();
 enum GeomType {
     Polygon,
     Point,
-    LineString,
     MultiPoint,
 }
 
@@ -65,7 +64,6 @@ pub fn parse_wkt(raw_str: String) -> Result<GeomWrapper, String> {
             Ok(mp) => Ok(GeomWrapper::MultiPoint(mp)),
             Err(s) => Err(s),
         },
-        _ => Err(String::from("Not implemented")),
     }
 }
 
