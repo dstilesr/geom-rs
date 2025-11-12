@@ -53,6 +53,32 @@ impl Polygon {
         }
         total_intersects % 2 != 0
     }
+
+    /// Determine if the polygon is convex (that is, all "turns") are in the same
+    /// direction.
+    pub fn is_convex(&self) -> bool {
+        // Initial direction to compare with - note that the last entry in the vector is the same as the first!
+        let initial = direction(
+            &self.outer[self.outer.len() - 2],
+            &self.outer[0],
+            &self.outer[1],
+        );
+        for i in 0..self.outer.len() - 2 {
+            let p1 = &self.outer[i];
+            let p2 = &self.outer[(i + 1) % self.outer.len()];
+            let p3 = &self.outer[(i + 3) % self.outer.len()];
+            let turn = direction(p1, p2, p3);
+
+            if initial != turn {
+                println!(
+                    "Turn mismatch: {:?} - {:?} - Points: {:?} {:?} {:?}",
+                    initial, turn, p1, p2, p3
+                );
+                return false;
+            }
+        }
+        true
+    }
 }
 
 impl GeometricObject for Polygon {
@@ -151,5 +177,42 @@ mod tests {
             let pt = Point::new(random.random(), random.random());
             assert!(poly.contains(&pt));
         }
+    }
+
+    #[test]
+    fn test_is_convex() {
+        // Unit square
+        let poly1 = Polygon::from_points(vec![
+            Point::new(0.0, 0.0),
+            Point::new(0.0, 1.0),
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 0.0),
+            Point::new(0.0, 0.0),
+        ])
+        .unwrap();
+
+        assert!(poly1.is_convex());
+
+        // Unit square with wedge
+        let poly2 = Polygon::from_points(vec![
+            Point::new(0.0, 0.0),
+            Point::new(0.0, 1.0),
+            Point::new(0.5, 0.5),
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 0.0),
+            Point::new(0.0, 0.0),
+        ])
+        .unwrap();
+        assert!(!poly2.is_convex());
+
+        // Triangle
+        let poly3 = Polygon::from_points(vec![
+            Point::new(0.0, 0.0),
+            Point::new(0.0, 1.0),
+            Point::new(1.0, 1.0),
+            Point::new(0.0, 0.0),
+        ])
+        .unwrap();
+        assert!(!poly3.is_convex());
     }
 }
