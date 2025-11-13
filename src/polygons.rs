@@ -87,12 +87,11 @@ impl Polygon {
         true
     }
 
-    /// Compute the "shoelace" sum over the polygon's edges. This is the oriented area of the
+    /// Compute the "shoelace" sum over the polygon's edges. This is twice the oriented area of the
     /// polygon.
     fn shoelace(&self) -> f64 {
         let mut val = 0.0;
-        for (i, pt) in self.outer[..self.outer.len() - 1].iter().enumerate() {
-            let nxt = &self.outer[i + 1];
+        for (pt, nxt) in self.outer.iter().zip(&self.outer[1..]) {
             let (p1, p2) = pt.coords();
             let (q1, q2) = nxt.coords();
             val += (q1 - p1) * (q2 + p2);
@@ -141,7 +140,7 @@ mod tests {
     /// in the unit square.
     fn random_polygon(sample_pts: usize) -> Polygon {
         assert!(sample_pts > 2);
-        let mut pts = Vec::new();
+        let mut pts = Vec::with_capacity(sample_pts);
         let mut random = rng();
 
         for _ in 0..sample_pts {
