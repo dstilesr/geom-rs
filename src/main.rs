@@ -52,6 +52,7 @@ fn main() {
     }
 }
 
+/// Run the CLI command
 fn run(cli: Cli) -> Result<(), String> {
     match cli.command {
         AppCommands::ParseCli { wkt } => {

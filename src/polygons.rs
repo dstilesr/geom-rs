@@ -79,6 +79,24 @@ impl Polygon {
         }
         true
     }
+
+    /// Compute the "shoelace" sum over the polygon's edges. This is the oriented area of the
+    /// polygon.
+    fn shoelace(&self) -> f64 {
+        let mut val = 0.0;
+        for (i, pt) in self.outer[..self.outer.len() - 1].iter().enumerate() {
+            let nxt = &self.outer[i + 1];
+            let (p1, p2) = pt.coords();
+            let (q1, q2) = nxt.coords();
+            val += (q1 - p1) * (q2 + p2);
+        }
+        val
+    }
+
+    /// Compute the area of the polygon using the "Shoelace" sum method.
+    pub fn area(&self) -> f64 {
+        self.shoelace().abs() / 2.0
+    }
 }
 
 impl GeometricObject for Polygon {
@@ -97,8 +115,24 @@ impl GeometricObject for Polygon {
 
 #[cfg(test)]
 mod tests {
+    use crate::convex_hull;
+
+    use super::super::points;
     use super::*;
     use rand::{Rng, rng};
+
+    /// Instantiate a convex polygon from a set of randomly generated points
+    /// in the unit square.
+    fn random_polygon(sample_pts: usize) -> Polygon {
+        assert!(sample_pts > 2);
+        let mut pts = Vec::new();
+        let mut random = rng();
+
+        for _ in 0..sample_pts {
+            pts.push(Point::new(random.random(), random.random()));
+        }
+        convex_hull(&pts).unwrap()
+    }
 
     #[test]
     fn test_instantiation() {
@@ -214,5 +248,49 @@ mod tests {
         ])
         .unwrap();
         assert!(!poly3.is_convex());
+    }
+
+    #[test]
+    fn test_area_computation() {
+        // Unit square
+        let poly1 = Polygon::from_points(vec![
+            Point::new(0.0, 0.0),
+            Point::new(0.0, 1.0),
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 0.0),
+            Point::new(0.0, 0.0),
+        ])
+        .unwrap();
+        assert!(points::close(poly1.area(), 1.0, 1e-9, 1e-12));
+
+        // Half square
+        let poly1 = Polygon::from_points(vec![
+            Point::new(0.0, 0.0),
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 0.0),
+            Point::new(0.0, 0.0),
+        ])
+        .unwrap();
+        assert!(points::close(poly1.area(), 0.5, 1e-9, 1e-12));
+
+        // Quarter square
+        let poly1 = Polygon::from_points(vec![
+            Point::new(0.0, 0.0),
+            Point::new(0.5, 0.5),
+            Point::new(1.0, 0.0),
+            Point::new(0.0, 0.0),
+        ])
+        .unwrap();
+        assert!(points::close(poly1.area(), 0.25, 1e-9, 1e-12));
+    }
+
+    #[test]
+    fn test_area_random() {
+        let total_pts = 350;
+        let poly = random_polygon(total_pts);
+        let area = poly.area();
+
+        assert!(area > 0.0);
+        assert!(area <= 1.0);
     }
 }

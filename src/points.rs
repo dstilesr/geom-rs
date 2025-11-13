@@ -115,8 +115,17 @@ pub fn direction(p1: &Point, p2: &Point, p3: &Point) -> Turn {
     }
 }
 
-// Return whether two numbers are close with the given absolute and relative tolerances
-fn close(a: f64, b: f64, rtol: f64, atol: f64) -> bool {
+/// Return whether two numbers are approximately equal.
+///
+/// Determines if the given numbers are close with the given absolute and relative tolerances.
+///
+/// Examples:
+/// ```rust
+/// use geom;
+///
+/// println!("Close: {}", geom::close(0.0, 0.0, 1e-10, 1e-9));
+/// ```
+pub fn close(a: f64, b: f64, rtol: f64, atol: f64) -> bool {
     assert!(rtol >= 0.0 && atol >= 0.0);
     let scale = a.abs().max(b.abs());
     (a - b).abs() < (atol + rtol * scale)
