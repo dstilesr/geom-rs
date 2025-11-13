@@ -36,11 +36,17 @@ enum AppCommands {
     /// Computes the convex hull of a geometry given as WKT. You must provide either a wkt string
     /// directly or a path to a file containing the wkt.
     ConvexHull {
+        /// File to read the geometry (WKT) from to compute convex hull
         #[arg(short, long, default_value = "")]
         file: String,
 
+        /// WKT string of the geometry for which to compute the convex hull
         #[arg(short, long, default_value = "")]
         wkt: String,
+
+        /// If given, save the output as wkt to this filepath
+        #[arg(short, long, default_value = "")]
+        output_file: String,
     },
 }
 
@@ -58,10 +64,21 @@ fn run(cli: Cli) -> Result<(), String> {
         AppCommands::ParseCli { wkt } => {
             return cli_commands::parse_show_detail(wkt);
         }
-        AppCommands::ConvexHull { file, wkt } => match get_string(wkt, file) {
-            Err(err) => Err(format!("Error reading WKT from file: {err}")),
-            Ok(source) => cli_commands::compute_convex_hull(source, None),
-        },
+        AppCommands::ConvexHull {
+            file,
+            wkt,
+            output_file,
+        } => {
+            let ofp = if output_file.trim() == "" {
+                None
+            } else {
+                Some(output_file.trim())
+            };
+            match get_string(wkt, file) {
+                Err(err) => Err(format!("Error reading WKT from file: {err}")),
+                Ok(source) => cli_commands::compute_convex_hull(source, ofp),
+            }
+        }
     }
 }
 

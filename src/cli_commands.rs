@@ -3,7 +3,7 @@ use super::*;
 use std::fs::File;
 use std::io::Write;
 
-/// Parse an input string and print some details about the shape
+/// Parse an input string in WKT format and print some details about the shape
 pub fn parse_show_detail(input: String) -> Result<(), String> {
     match parse_wkt(input) {
         Err(e) => Err(format!("Failed to parse WKT: {}", e)),
@@ -38,7 +38,7 @@ pub fn parse_show_detail(input: String) -> Result<(), String> {
 }
 
 /// Parse the given input string, compute its convex hull, and optionally save the result
-pub fn compute_convex_hull(input: String, output_path: Option<String>) -> Result<(), String> {
+pub fn compute_convex_hull(input: String, output_path: Option<&str>) -> Result<(), String> {
     let points = match parse_wkt(input)? {
         GeomWrapper::Point(_) => {
             return Err(String::from(
