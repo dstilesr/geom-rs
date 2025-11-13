@@ -25,6 +25,11 @@ pub fn parse_show_detail(input: String) -> Result<(), String> {
                 "The polygon contains {} total vertices.",
                 poly.outer.len() - 1
             );
+            println!("The polygon's area is {}", poly.area());
+            println!(
+                "The polygon's vertices are oriented: {:?}",
+                poly.orientation()
+            );
             if poly.is_convex() {
                 println!("The polygon is convex");
             }
