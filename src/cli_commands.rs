@@ -16,7 +16,6 @@ pub fn parse_show_detail(input: String) -> Result<(), String> {
         Ok(GeomWrapper::MultiPoint(mp)) => {
             println!("Parsed a Geometry of Type MultiPoint!");
             println!("The multipoint contains {} total points.", mp.points.len());
-            println!("Raw value: {mp:?}");
             Ok(())
         }
         Ok(GeomWrapper::Polygon(poly)) => {
@@ -33,7 +32,6 @@ pub fn parse_show_detail(input: String) -> Result<(), String> {
             if poly.is_convex() {
                 println!("The polygon is convex");
             }
-            println!("Raw value: {poly:?}");
             Ok(())
         }
     }
@@ -58,7 +56,7 @@ pub fn compute_convex_hull(input: String, output_path: Option<String>) -> Result
         (None, _) => Err(String::from("Unable to compute convex hull")),
         (Some(poly), None) => {
             println!("Computed convex hull of the given geometry!");
-            println!("Convex hull: {}", poly.wkt());
+            println!("Convex hull: {}", poly);
             Ok(())
         }
         (Some(poly), Some(ref fp)) => {

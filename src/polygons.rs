@@ -1,4 +1,4 @@
-use super::geom_object::GeometricObject;
+use super::geom_object::{GeometricObject, display_for_geom};
 use super::points::*;
 
 /// Represents a polygon on the Plane
@@ -127,6 +127,8 @@ impl GeometricObject for Polygon {
         format!("POLYGON(({}))", stripped)
     }
 }
+
+display_for_geom!(Polygon);
 
 #[cfg(test)]
 mod tests {

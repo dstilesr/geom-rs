@@ -1,4 +1,4 @@
-use super::geom_object::GeometricObject;
+use super::geom_object::{GeometricObject, display_for_geom};
 
 const ATOL: f64 = 1e-12;
 const RTOL: f64 = 1e-9;
@@ -66,6 +66,15 @@ impl Point {
     }
 }
 
+impl GeometricObject for Point {
+    /// WKT representation of the point
+    fn wkt(&self) -> String {
+        format!("POINT ({} {})", self.x, self.y)
+    }
+}
+
+display_for_geom!(Point);
+
 impl MultiPoint {
     /// Instantiate a multipoint collection
     ///
@@ -93,12 +102,7 @@ impl GeometricObject for MultiPoint {
     }
 }
 
-impl GeometricObject for Point {
-    /// WKT representation of the point
-    fn wkt(&self) -> String {
-        format!("POINT ({} {})", self.x, self.y)
-    }
-}
+display_for_geom!(MultiPoint);
 
 /// Determine the turn direction defined by three successive points
 pub fn direction(p1: &Point, p2: &Point, p3: &Point) -> Turn {
