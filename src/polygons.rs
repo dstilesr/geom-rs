@@ -112,6 +112,11 @@ impl Polygon {
             Orientation::CounterClockwise
         }
     }
+
+    /// Reverse the polygon's vertices' orientation.
+    pub fn reverse_orientation(&mut self) {
+        self.outer.reverse();
+    }
 }
 
 impl GeometricObject for Polygon {
@@ -332,5 +337,13 @@ mod tests {
         ])
         .unwrap();
         assert_eq!(Orientation::CounterClockwise, poly2.orientation());
+    }
+
+    #[test]
+    fn test_reverse_orientation() {
+        let mut poly = random_polygon(64);
+        let original = poly.orientation();
+        poly.reverse_orientation();
+        assert_ne!(original, poly.orientation());
     }
 }
