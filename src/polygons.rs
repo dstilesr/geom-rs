@@ -8,6 +8,13 @@ pub struct Polygon {
     // TODO -  add inner rings
 }
 
+/// Represents the orientation of a Polygon's vertices.
+#[derive(PartialEq, Eq, Debug)]
+pub enum Orientation {
+    Clockwise,
+    CounterClockwise,
+}
+
 impl Polygon {
     /// Instantiate a polygon from a vector of points
     pub fn from_points(pts: Vec<Point>) -> Result<Self, String> {
@@ -96,6 +103,15 @@ impl Polygon {
     /// Compute the area of the polygon using the "Shoelace" sum method.
     pub fn area(&self) -> f64 {
         self.shoelace().abs() / 2.0
+    }
+
+    /// Determine the orientation of the polygon's vertices with the shoelace method.
+    pub fn orientation(&self) -> Orientation {
+        if self.shoelace() > 0.0 {
+            Orientation::Clockwise
+        } else {
+            Orientation::CounterClockwise
+        }
     }
 }
 
@@ -264,24 +280,24 @@ mod tests {
         assert!(points::close(poly1.area(), 1.0, 1e-9, 1e-12));
 
         // Half square
-        let poly1 = Polygon::from_points(vec![
+        let poly2 = Polygon::from_points(vec![
             Point::new(0.0, 0.0),
             Point::new(1.0, 1.0),
             Point::new(1.0, 0.0),
             Point::new(0.0, 0.0),
         ])
         .unwrap();
-        assert!(points::close(poly1.area(), 0.5, 1e-9, 1e-12));
+        assert!(points::close(poly2.area(), 0.5, 1e-9, 1e-12));
 
         // Quarter square
-        let poly1 = Polygon::from_points(vec![
+        let poly3 = Polygon::from_points(vec![
             Point::new(0.0, 0.0),
             Point::new(0.5, 0.5),
             Point::new(1.0, 0.0),
             Point::new(0.0, 0.0),
         ])
         .unwrap();
-        assert!(points::close(poly1.area(), 0.25, 1e-9, 1e-12));
+        assert!(points::close(poly3.area(), 0.25, 1e-9, 1e-12));
     }
 
     #[test]
@@ -292,5 +308,28 @@ mod tests {
 
         assert!(area > 0.0);
         assert!(area <= 1.0);
+    }
+
+    #[test]
+    fn test_orientation() {
+        // Half square
+        let poly1 = Polygon::from_points(vec![
+            Point::new(0.0, 0.0),
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 0.0),
+            Point::new(0.0, 0.0),
+        ])
+        .unwrap();
+        assert_eq!(Orientation::Clockwise, poly1.orientation());
+
+        // Reverse vertex order
+        let poly2 = Polygon::from_points(vec![
+            Point::new(0.0, 0.0),
+            Point::new(1.0, 0.0),
+            Point::new(1.0, 1.0),
+            Point::new(0.0, 0.0),
+        ])
+        .unwrap();
+        assert_eq!(Orientation::CounterClockwise, poly2.orientation());
     }
 }
