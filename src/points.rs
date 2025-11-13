@@ -104,12 +104,11 @@ impl GeometricObject for Point {
 pub fn direction(p1: &Point, p2: &Point, p3: &Point) -> Turn {
     let det = (p2.x * p3.y) - (p2.y * p3.x) - (p1.x * p3.y) + (p1.y * p3.x) + (p1.x * p2.y)
         - (p1.y * p2.x);
-    if det < 0.0 {
-        Turn::Right
-    } else if det == 0.0 {
-        // TODO: This sould be defined by some small tolerance on the absolute value for
-        // robustness, perhaps
+
+    if close(det, 0.0, RTOL, ATOL) {
         Turn::InLine
+    } else if det < 0.0 {
+        Turn::Right
     } else {
         Turn::Left
     }
