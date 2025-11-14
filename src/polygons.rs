@@ -1,4 +1,4 @@
-use super::geom_object::{GeometricObject, display_for_geom};
+use super::core::{GeometricObject, display_for_geom};
 use super::points::*;
 
 /// Represents a polygon on the Plane
@@ -137,9 +137,8 @@ display_for_geom!(Polygon);
 
 #[cfg(test)]
 mod tests {
-    use crate::convex_hull;
 
-    use super::super::points;
+    use super::super::{convex_hull, core};
     use super::*;
     use rand::{Rng, rng};
 
@@ -283,7 +282,7 @@ mod tests {
             Point::new(0.0, 0.0),
         ])
         .unwrap();
-        assert!(points::close(poly1.area(), 1.0, 1e-9, 1e-12));
+        assert!(core::approx(poly1.area(), 1.0));
 
         // Half square
         let poly2 = Polygon::from_points(vec![
@@ -293,7 +292,7 @@ mod tests {
             Point::new(0.0, 0.0),
         ])
         .unwrap();
-        assert!(points::close(poly2.area(), 0.5, 1e-9, 1e-12));
+        assert!(core::approx(poly2.area(), 0.5));
 
         // Quarter square
         let poly3 = Polygon::from_points(vec![
@@ -303,7 +302,7 @@ mod tests {
             Point::new(0.0, 0.0),
         ])
         .unwrap();
-        assert!(points::close(poly3.area(), 0.25, 1e-9, 1e-12));
+        assert!(core::approx(poly3.area(), 0.25));
     }
 
     #[test]

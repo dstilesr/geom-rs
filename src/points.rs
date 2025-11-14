@@ -1,7 +1,4 @@
-use super::geom_object::{GeometricObject, display_for_geom};
-
-const ATOL: f64 = 1e-12;
-const RTOL: f64 = 1e-9;
+use super::core::{self, GeometricObject, display_for_geom};
 
 /// A single Point on the Plane (2D)
 ///
@@ -57,7 +54,7 @@ impl Point {
 
     /// Return true if the point is approximately equal to other.
     pub fn is_close(&self, other: &Point) -> bool {
-        close(self.x, other.x, RTOL, ATOL) && close(self.y, other.y, RTOL, ATOL)
+        core::approx(self.x, other.x) && core::approx(self.y, other.y)
     }
 
     /// Get coordinates as a tuple
@@ -109,29 +106,13 @@ pub fn direction(p1: &Point, p2: &Point, p3: &Point) -> Turn {
     let det = (p2.x * p3.y) - (p2.y * p3.x) - (p1.x * p3.y) + (p1.y * p3.x) + (p1.x * p2.y)
         - (p1.y * p2.x);
 
-    if close(det, 0.0, RTOL, ATOL) {
+    if core::approx(det, 0.0) {
         Turn::InLine
     } else if det < 0.0 {
         Turn::Right
     } else {
         Turn::Left
     }
-}
-
-/// Return whether two numbers are approximately equal.
-///
-/// Determines if the given numbers are close with the given absolute and relative tolerances.
-///
-/// Examples:
-/// ```rust
-/// use geom;
-///
-/// println!("Close: {}", geom::close(0.0, 0.0, 1e-10, 1e-9));
-/// ```
-pub fn close(a: f64, b: f64, rtol: f64, atol: f64) -> bool {
-    assert!(rtol >= 0.0 && atol >= 0.0);
-    let scale = a.abs().max(b.abs());
-    (a - b).abs() < (atol + rtol * scale)
 }
 
 /// Sort a vector of points lexicographically
