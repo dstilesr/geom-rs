@@ -96,7 +96,7 @@ pub fn intersection_point(s1: &Segment, s2: &Segment) -> Option<Point> {
 
     let det = (b1 - a1) * (c2 - d2) - (b2 - a2) * (c1 - d1);
     if core::approx(det, 0.0) {
-        log::debug!("Parallel segments: {s1:?} {s2:?}");
+        // Parallel segments
         return None;
     }
 
@@ -109,7 +109,6 @@ pub fn intersection_point(s1: &Segment, s2: &Segment) -> Option<Point> {
             t1 * b2 + (1.0 - t1) * a2,
         ))
     } else {
-        log::debug!("Intersection out of bounds for {s1:?} and {s2:?}");
         None
     }
 }
@@ -185,6 +184,13 @@ mod tests {
 
         let inter = intersection_point(&s1, &s2).unwrap();
         assert!(inter.is_close(&Point::new(4.0, 2.0)));
+
+        // Consecutive segments
+        let s1 = (Point::new(2.0, 1.0), Point::new(6.0, 3.0));
+        let s2 = (Point::new(6.0, 3.0), Point::new(9.0, 0.0));
+
+        let inter = intersection_point(&s1, &s2).unwrap();
+        assert!(inter.is_close(&Point::new(6.0, 3.0)));
     }
 
     #[test]
