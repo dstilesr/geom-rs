@@ -15,7 +15,7 @@ enum GeomType {
     MultiPoint,
 }
 
-// Get coordinate pair regex once to avoid recompilation (thread-safe)
+/// Get coordinate pair regex once to avoid recompilation (thread-safe)
 fn coord_pair_re() -> &'static Regex {
     COORD_PAIR_RE.get_or_init(|| Regex::new(COORD_PAIR).unwrap())
 }
@@ -67,7 +67,7 @@ pub fn parse_wkt(raw_str: String) -> Result<GeomWrapper, String> {
     }
 }
 
-// Identifies the type of geometry at the start of a WKT string
+/// Identifies the type of geometry at the start of a WKT string
 fn identify_type(raw: &str) -> Result<(GeomType, usize), String> {
     let re = geom_type_re();
     if let Some(m) = re.find(raw) {
@@ -84,7 +84,7 @@ fn identify_type(raw: &str) -> Result<(GeomType, usize), String> {
     }
 }
 
-// Parse a point coordinates (after removing the type prefix from the string)
+/// Parse a point coordinates (after removing the type prefix from the string)
 fn parse_point(raw: &str) -> Result<Point, String> {
     let re = coord_pair_re();
     let trimmed = raw.trim();
@@ -110,7 +110,7 @@ fn parse_point(raw: &str) -> Result<Point, String> {
     }
 }
 
-// Parse a list of points from a string with type prefix removed
+/// Parse a list of points from a string with type prefix removed
 fn parse_multipoint(raw_str: &str) -> Result<MultiPoint, String> {
     let trimmed = raw_str.trim();
     match parse_coordinate_list(trimmed) {
@@ -165,8 +165,8 @@ fn parse_polygon(raw_str: &str) -> Result<Polygon, String> {
             if (!suffix_trim.starts_with(")")) || suffix_trim.len() != 1 {
                 return Err(String::from("Expected ')' to close polygon"));
             }
-            match Polygon::from_points(points) {
-                Err(err) => Err(err),
+            match Polygon::new(points) {
+                Err(err) => Err(err.to_string()),
                 Ok(poly) => Ok(poly),
             }
         }

@@ -1,4 +1,4 @@
-use super::core::{GeometricObject, display_for_geom};
+use super::core::{GeomResult, GeometricObject, GeometryError, display_for_geom};
 use super::points::*;
 
 /// Represents a polygon on the Plane
@@ -17,18 +17,18 @@ pub enum Orientation {
 
 impl Polygon {
     /// Instantiate a polygon from a vector of points
-    pub fn from_points(pts: Vec<Point>) -> Result<Self, String> {
+    pub fn new(pts: Vec<Point>) -> GeomResult<Self> {
         if pts.len() < 4 {
-            return Err(format!(
+            return Err(GeometryError::ParameterError(format!(
                 "Too few points to create a polygon: {}!",
                 pts.len() - 1
-            ));
+            )));
         } else if !pts[0].is_close(&pts[pts.len() - 1]) {
-            return Err(format!(
+            return Err(GeometryError::ParameterError(format!(
                 "To make polygon, the first and last points must match! got {:?} and {:?}",
                 pts[0].coords(),
                 pts[pts.len() - 1].coords(),
-            ));
+            )));
         }
         Ok(Self { outer: pts })
     }
@@ -162,7 +162,7 @@ mod tests {
             Point::new(0.0, 0.0),
             Point::new(1.0, 0.0),
         ];
-        if let Ok(_) = Polygon::from_points(v1) {
+        if let Ok(_) = Polygon::new(v1) {
             panic!("Instantiated a polygon with too few points");
         }
 
@@ -172,7 +172,7 @@ mod tests {
             Point::new(1.0, 0.0),
             Point::new(2.0, 2.0),
         ];
-        if let Ok(_) = Polygon::from_points(v2) {
+        if let Ok(_) = Polygon::new(v2) {
             panic!("Instantiated a polygon with mismatched start and end");
         }
 
@@ -182,7 +182,7 @@ mod tests {
             Point::new(1.0, 0.0),
             Point::new(0.0, 1.0),
         ];
-        if let Err(_) = Polygon::from_points(triangle) {
+        if let Err(_) = Polygon::new(triangle) {
             panic!("Failed to instantiate a valid polygon");
         }
 
@@ -193,14 +193,14 @@ mod tests {
             Point::new(1.0, 0.0),
             Point::new(0.0, 0.0),
         ];
-        if let Err(_) = Polygon::from_points(square) {
+        if let Err(_) = Polygon::new(square) {
             panic!("Failed to instantiate a valid polygon");
         }
     }
 
     #[test]
     fn test_contains() {
-        let poly = Polygon::from_points(vec![
+        let poly = Polygon::new(vec![
             Point::new(0.0, 0.0),
             Point::new(0.0, 1.0),
             Point::new(1.0, 1.0),
@@ -219,7 +219,7 @@ mod tests {
     fn test_contains_random() {
         let mut random = rng();
         let total_runs = 600;
-        let poly = Polygon::from_points(vec![
+        let poly = Polygon::new(vec![
             Point::new(0.0, 0.0),
             Point::new(0.0, 1.0),
             Point::new(1.0, 1.0),
@@ -237,7 +237,7 @@ mod tests {
     #[test]
     fn test_is_convex() {
         // Unit square
-        let poly1 = Polygon::from_points(vec![
+        let poly1 = Polygon::new(vec![
             Point::new(0.0, 0.0),
             Point::new(0.0, 1.0),
             Point::new(1.0, 1.0),
@@ -249,7 +249,7 @@ mod tests {
         assert!(poly1.is_convex());
 
         // Unit square with wedge
-        let poly2 = Polygon::from_points(vec![
+        let poly2 = Polygon::new(vec![
             Point::new(0.0, 0.0),
             Point::new(0.0, 1.0),
             Point::new(0.5, 0.5),
@@ -261,7 +261,7 @@ mod tests {
         assert!(!poly2.is_convex());
 
         // Triangle
-        let poly3 = Polygon::from_points(vec![
+        let poly3 = Polygon::new(vec![
             Point::new(0.0, 0.0),
             Point::new(0.0, 1.0),
             Point::new(1.0, 1.0),
@@ -274,7 +274,7 @@ mod tests {
     #[test]
     fn test_area_computation() {
         // Unit square
-        let poly1 = Polygon::from_points(vec![
+        let poly1 = Polygon::new(vec![
             Point::new(0.0, 0.0),
             Point::new(0.0, 1.0),
             Point::new(1.0, 1.0),
@@ -285,7 +285,7 @@ mod tests {
         assert!(core::approx(poly1.area(), 1.0));
 
         // Half square
-        let poly2 = Polygon::from_points(vec![
+        let poly2 = Polygon::new(vec![
             Point::new(0.0, 0.0),
             Point::new(1.0, 1.0),
             Point::new(1.0, 0.0),
@@ -295,7 +295,7 @@ mod tests {
         assert!(core::approx(poly2.area(), 0.5));
 
         // Quarter square
-        let poly3 = Polygon::from_points(vec![
+        let poly3 = Polygon::new(vec![
             Point::new(0.0, 0.0),
             Point::new(0.5, 0.5),
             Point::new(1.0, 0.0),
@@ -318,7 +318,7 @@ mod tests {
     #[test]
     fn test_orientation() {
         // Half square
-        let poly1 = Polygon::from_points(vec![
+        let poly1 = Polygon::new(vec![
             Point::new(0.0, 0.0),
             Point::new(1.0, 1.0),
             Point::new(1.0, 0.0),
@@ -328,7 +328,7 @@ mod tests {
         assert_eq!(Orientation::Clockwise, poly1.orientation());
 
         // Reverse vertex order
-        let poly2 = Polygon::from_points(vec![
+        let poly2 = Polygon::new(vec![
             Point::new(0.0, 0.0),
             Point::new(1.0, 0.0),
             Point::new(1.0, 1.0),
