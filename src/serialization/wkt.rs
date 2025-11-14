@@ -175,7 +175,7 @@ fn parse_polygon(raw_str: &str) -> Result<Polygon, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::cvx::convex_hull;
+    use super::ops::convex_hull;
 
     use super::*;
     use rand::{Rng, rng};

@@ -1,8 +1,12 @@
+use log;
 use std::slice::Iter;
 
+use super::core;
 use super::points::*;
 use super::polygons::*;
-use log;
+
+/// Line segment between two points
+pub type Segment = (Point, Point);
 
 /// Compute the convex hull of a set of points.
 ///
@@ -66,6 +70,50 @@ fn half_hull(points: Iter<Point>) -> Vec<Point> {
     hull
 }
 
+/// Compute the intersection of two line segments.
+///
+/// Compute the intersection between two given line segments. Returns
+/// None if the segments do not intersect or are parallel.
+///
+/// Examples
+/// ```rust
+/// use geom::{self, Point};
+/// let seg1 = (Point::new(0.0, 0.0), Point::new(1.0, 1.0));
+/// let seg2 = (Point::new(1.0, 0.0), Point::new(0.0, 1.0));
+/// let pt = Point::new(0.5, 0.5);
+///
+/// let inter = geom::intersection_point(&seg1, &seg2).unwrap();
+/// assert!(inter.is_close(&pt));
+/// ```
+pub fn intersection_point(s1: &Segment, s2: &Segment) -> Option<Point> {
+    let (a, b) = s1;
+    let (c, d) = s2;
+
+    let (a1, a2) = a.coords();
+    let (b1, b2) = b.coords();
+    let (c1, c2) = c.coords();
+    let (d1, d2) = d.coords();
+
+    let det = (b1 - a1) * (c2 - d2) - (b2 - a2) * (c1 - d1);
+    if core::approx(det, 0.0) {
+        log::debug!("Parallel segments: {s1:?} {s2:?}");
+        return None;
+    }
+
+    let t1 = ((c2 - d2) * (c1 - a1) + (d1 - c1) * (c2 - a2)) / det;
+    let t2 = ((a2 - b2) * (c1 - a1) + (b1 - a1) * (c2 - a2)) / det;
+
+    if 0.0 <= t1 && t1 <= 1.0 && 0.0 <= t2 && t2 <= 1.0 {
+        Some(Point::new(
+            t1 * b1 + (1.0 - t1) * a1,
+            t1 * b2 + (1.0 - t1) * a2,
+        ))
+    } else {
+        log::debug!("Intersection out of bounds for {s1:?} and {s2:?}");
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,6 +160,47 @@ mod tests {
                 assert!(poly.is_convex());
             }
             None => panic!("Could not instantiate convex hull of random points"),
+        }
+    }
+
+    #[test]
+    fn test_intersect_true() {
+        // Diagonals in unit square
+        let s1 = (Point::new(0.0, 0.0), Point::new(1.0, 1.0));
+        let s2 = (Point::new(0.0, 1.0), Point::new(1.0, 0.0));
+
+        let inter = intersection_point(&s1, &s2).unwrap();
+        assert!(inter.is_close(&Point::new(0.5, 0.5)));
+
+        // Example 2
+        let s1 = (Point::new(0.0, 0.0), Point::new(4.0, 4.0));
+        let s2 = (Point::new(1.0, 3.0), Point::new(3.0, 1.0));
+
+        let inter = intersection_point(&s1, &s2).unwrap();
+        assert!(inter.is_close(&Point::new(2.0, 2.0)));
+
+        // Example 3
+        let s1 = (Point::new(2.0, 1.0), Point::new(6.0, 3.0));
+        let s2 = (Point::new(4.0, 0.0), Point::new(4.0, 3.0));
+
+        let inter = intersection_point(&s1, &s2).unwrap();
+        assert!(inter.is_close(&Point::new(4.0, 2.0)));
+    }
+
+    #[test]
+    fn test_intersect_false() {
+        // Parallel
+        let s1 = (Point::new(0.0, 0.0), Point::new(4.0, 4.0));
+        let s2 = (Point::new(1.0, 0.0), Point::new(5.0, 4.0));
+        if let Some(_) = intersection_point(&s1, &s2) {
+            panic!("Parallel segments intersected!")
+        }
+
+        // Non intersecting
+        let s1 = (Point::new(5.0, 1.0), Point::new(7.0, 3.0));
+        let s2 = (Point::new(2.0, 0.0), Point::new(3.0, 2.0));
+        if let Some(_) = intersection_point(&s1, &s2) {
+            panic!("Unexpected segment intersection!")
         }
     }
 }

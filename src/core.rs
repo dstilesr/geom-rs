@@ -1,4 +1,7 @@
+/// Default absolute tolerance for float number comparisons
 const ATOL: f64 = 1e-12;
+
+/// Default relative tolerance for float number comparisons
 const RTOL: f64 = 1e-9;
 
 /// Trait with common functionality for all geometric objects
