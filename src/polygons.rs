@@ -1,5 +1,7 @@
 use super::core::{GeomResult, GeometricObject, GeometryError, display_for_geom};
 use super::points::*;
+use std::iter::Zip;
+use std::slice::Iter;
 
 /// Represents a polygon on the Plane
 #[derive(Debug)]
@@ -73,7 +75,7 @@ impl Polygon {
         for i in 0..self.outer.len() - 2 {
             let p1 = &self.outer[i];
             let p2 = &self.outer[(i + 1) % self.outer.len()];
-            let p3 = &self.outer[(i + 3) % self.outer.len()];
+            let p3 = &self.outer[(i + 2) % self.outer.len()];
             let turn = direction(p1, p2, p3);
 
             if initial != turn {
@@ -91,7 +93,7 @@ impl Polygon {
     /// polygon.
     fn shoelace(&self) -> f64 {
         let mut val = 0.0;
-        for (pt, nxt) in self.outer.iter().zip(&self.outer[1..]) {
+        for (pt, nxt) in self.edges() {
             let (p1, p2) = pt.coords();
             let (q1, q2) = nxt.coords();
             val += (q1 - p1) * (q2 + p2);
@@ -116,6 +118,11 @@ impl Polygon {
     /// Reverse the polygon's vertices' orientation.
     pub fn reverse_orientation(&mut self) {
         self.outer.reverse();
+    }
+
+    /// Returns an iterator over the edges of the polygon
+    pub fn edges<'a>(&'a self) -> Zip<Iter<'a, Point>, Iter<'a, Point>> {
+        return self.outer.iter().zip(&self.outer[1..]);
     }
 }
 
@@ -268,7 +275,7 @@ mod tests {
             Point::new(0.0, 0.0),
         ])
         .unwrap();
-        assert!(!poly3.is_convex());
+        assert!(poly3.is_convex());
     }
 
     #[test]
