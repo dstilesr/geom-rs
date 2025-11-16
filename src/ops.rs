@@ -82,15 +82,19 @@ fn half_hull(points: Iter<Point>) -> Vec<Point> {
 /// Examples
 /// ```rust
 /// use geom::{self, Point};
-/// let seg1 = (Point::new(0.0, 0.0), Point::new(1.0, 1.0));
-/// let seg2 = (Point::new(1.0, 0.0), Point::new(0.0, 1.0));
+/// let (start1, end1) = (Point::new(0.0, 0.0), Point::new(1.0, 1.0));
+/// let seg1 = (&start1, &end1);
+///
+/// let (start2, end2) = (Point::new(1.0, 0.0), Point::new(0.0, 1.0));
+/// let seg2 = (&start2, &end2);
 /// let pt = Point::new(0.5, 0.5);
 ///
-/// let inter = geom::intersection_point(&seg1, &seg2).unwrap();
+/// let inter = geom::intersection_point(seg1, seg2).unwrap();
 /// assert!(inter.is_close(&pt));
 ///
-/// let seg3 = (Point::new(2.0, 0.0), Point::new(2.0, 3.0));
-/// match geom::intersection_point(&seg1, &seg3) {
+/// let (start3, end3) = (Point::new(2.0, 0.0), Point::new(2.0, 3.0));
+/// let seg3 = (&start3, &end3);
+/// match geom::intersection_point(seg1, seg3) {
 ///     None => println!("Segments do not intersect"),
 ///     Some(_) => panic!("This is bad!"),
 /// };
@@ -361,5 +365,31 @@ mod tests {
         } else {
             panic!("Failed to clip polygon!")
         }
+    }
+
+    #[test]
+    fn test_clip_no_intersect() {
+        // Unit Square
+        let poly1 = Polygon::new(vec![
+            Point::new(0.0, 0.0),
+            Point::new(0.0, 1.0),
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 0.0),
+            Point::new(0.0, 0.0),
+        ])
+        .unwrap();
+        let poly2 = Polygon::new(vec![
+            Point::new(3.0, 0.0),
+            Point::new(3.0, 1.0),
+            Point::new(4.0, 1.0),
+            Point::new(4.0, 0.0),
+            Point::new(3.0, 0.0),
+        ])
+        .unwrap();
+
+        match clip_polygon(&poly1, &poly2).unwrap() {
+            None => (),
+            _ => panic!("Computed intersection of non intersecting polygons"),
+        };
     }
 }

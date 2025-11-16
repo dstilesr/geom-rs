@@ -1,3 +1,4 @@
+use super::core::{GeomResult, GeometryError};
 use super::*;
 use regex::Regex;
 use std::sync::OnceLock;
@@ -49,20 +50,20 @@ fn geom_type_re() -> &'static Regex {
 ///     _ => panic!("Failed"),
 /// }
 /// ```
-pub fn parse_wkt(raw_str: String) -> Result<GeomWrapper, String> {
+pub fn parse_wkt(raw_str: String) -> GeomResult<GeomWrapper> {
     match identify_type(&raw_str) {
-        Err(s) => Err(s),
+        Err(s) => Err(GeometryError::ParsingError(s)),
         Ok((GeomType::Point, n)) => match parse_point(&raw_str[n..]) {
             Ok(pt) => Ok(GeomWrapper::Point(pt)),
-            Err(s) => Err(s),
+            Err(s) => Err(GeometryError::ParsingError(s)),
         },
         Ok((GeomType::Polygon, n)) => match parse_polygon(&raw_str[n..]) {
             Ok(poly) => Ok(GeomWrapper::Polygon(poly)),
-            Err(s) => Err(s),
+            Err(s) => Err(GeometryError::ParsingError(s)),
         },
         Ok((GeomType::MultiPoint, n)) => match parse_multipoint(&raw_str[n..]) {
             Ok(mp) => Ok(GeomWrapper::MultiPoint(mp)),
-            Err(s) => Err(s),
+            Err(s) => Err(GeometryError::ParsingError(s)),
         },
     }
 }

@@ -48,18 +48,44 @@ enum AppCommands {
         #[arg(short, long, default_value = "")]
         output_file: String,
     },
+
+    /// Compute Polygon Clip (intersection)
+    ///
+    /// Clip the subject polygon to the clip polygon, that is, return their intersection.
+    /// The clipping polygon must be convex to use this method.
+    ClipPolygon {
+        /// WKT of the polygon to use to clip the other one
+        #[arg(short, long, default_value = "")]
+        clip_wkt: String,
+
+        /// WKT of the polygon to use to clip the other one
+        #[arg(long, default_value = "")]
+        clip_file: String,
+
+        /// WKT of the polygon to clip
+        #[arg(short, long, default_value = "")]
+        subject_wkt: String,
+
+        /// File with the polygon to clip
+        #[arg(long, default_value = "")]
+        subject_file: String,
+
+        /// If given, save the output as wkt to this filepath
+        #[arg(short, long, default_value = "")]
+        output_file: String,
+    },
 }
 
 fn main() {
     let cli = Cli::parse();
     if let Err(err) = run(cli) {
-        println!("Error running command: {err}");
+        eprintln!("Error running command: {err}");
         process::exit(1);
     }
 }
 
 /// Run the CLI command
-fn run(cli: Cli) -> Result<(), String> {
+fn run(cli: Cli) -> core::GeomResult<()> {
     match cli.command {
         AppCommands::ParseCli { wkt } => {
             return cli_commands::parse_show_detail(wkt);
@@ -75,9 +101,30 @@ fn run(cli: Cli) -> Result<(), String> {
                 Some(output_file.trim())
             };
             match get_string(wkt, file) {
-                Err(err) => Err(format!("Error reading WKT from file: {err}")),
+                Err(err) => Err(core::GeometryError::OperationError(format!(
+                    "Error reading WKT from file: {err}"
+                ))),
                 Ok(source) => cli_commands::compute_convex_hull(source, ofp),
             }
+        }
+        AppCommands::ClipPolygon {
+            clip_wkt,
+            clip_file,
+            subject_wkt,
+            subject_file,
+            output_file,
+        } => {
+            let wkt_c = get_string(clip_wkt, clip_file).map_err(cli_commands::wrap_io_error)?;
+            let wkt_s =
+                get_string(subject_wkt, subject_file).map_err(cli_commands::wrap_io_error)?;
+
+            let out_file = if output_file.trim() == "" {
+                None
+            } else {
+                Some(output_file.trim().to_string())
+            };
+
+            cli_commands::compute_clip_polygon(wkt_s, wkt_c, out_file)
         }
     }
 }
