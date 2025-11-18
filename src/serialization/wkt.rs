@@ -33,10 +33,9 @@ fn geom_type_re() -> &'static Regex {
 ///
 /// Examples
 /// ```rust
-/// use geom;
-/// use geom::serialization;
-/// use geom::serialization::GeomWrapper;
-/// use geom::{Polygon, Point};
+/// use geomlib;
+/// use geomlib::serialization::{self, GeomWrapper};
+/// use geomlib::{Polygon, Point};
 ///
 /// // Instantiate a point from string
 /// if let Ok(GeomWrapper::Point(pt)) = serialization::parse_wkt(String::from("POINT (0 0)")) {
@@ -152,7 +151,7 @@ fn parse_multipoint<'a>(raw_str: &'a str) -> ParserResult<'a, MultiPoint> {
     }
 }
 
-// Parse a list of coordinate pairs (points) from the start of a string
+/// Parse a list of coordinate pairs (points) from the start of a string
 fn parse_coordinate_list<'a>(raw_str: &'a str) -> ParserResult<'a, Vec<Point>> {
     let re = coord_pair_re();
 

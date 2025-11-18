@@ -30,9 +30,9 @@ pub(crate) use display_for_geom;
 ///
 /// Examples:
 /// ```rust
-/// use geom;
+/// use geomlib;
 ///
-/// println!("Close: {}", geom::is_close(0.0, 0.0, 1e-10, 1e-10));
+/// println!("Close: {}", geomlib::is_close(0.0, 0.0, 1e-10, 1e-10));
 /// ```
 pub fn is_close(a: f64, b: f64, rtol: f64, atol: f64) -> bool {
     assert!(rtol >= 0.0 && atol >= 0.0);
@@ -47,11 +47,11 @@ pub fn is_close(a: f64, b: f64, rtol: f64, atol: f64) -> bool {
 ///
 /// Example:
 /// ```rust
-/// use geom;
+/// use geomlib;
 /// let x1 = 0.123;
 /// let x2 = 0.123 + 1e-14;
 ///
-/// assert!(geom::approx(x1, x2));
+/// assert!(geomlib::approx(x1, x2));
 /// ```
 pub fn approx(a: f64, b: f64) -> bool {
     is_close(a, b, RTOL, ATOL)

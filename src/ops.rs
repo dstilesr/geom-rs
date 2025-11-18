@@ -15,8 +15,8 @@ pub type Segment<'a> = (&'a Point, &'a Point);
 ///
 /// Examples
 /// ```rust
-/// use geom;
-/// use geom::{Polygon, Point};
+/// use geomlib;
+/// use geomlib::{Polygon, Point};
 /// let points = vec![
 ///    Point::new(0.05, 0.75),
 ///    Point::new(0.0, 0.0),
@@ -26,7 +26,7 @@ pub type Segment<'a> = (&'a Point, &'a Point);
 ///    Point::new(0.5, 0.5),
 ///    Point::new(0.25, 0.25),
 /// ];
-/// let square: Polygon = geom::convex_hull(&points).unwrap();
+/// let square: Polygon = geomlib::convex_hull(&points).unwrap();
 /// ```
 pub fn convex_hull(points: &Vec<Point>) -> Option<Polygon> {
     if points.len() < 3 {
@@ -50,7 +50,7 @@ pub fn convex_hull(points: &Vec<Point>) -> Option<Polygon> {
     }
 }
 
-// Compute half a convex hull from a lexicographically sorted vector of points
+/// Compute half a convex hull from a lexicographically sorted vector of points
 fn half_hull(points: Iter<Point>) -> Vec<Point> {
     let mut hull = Vec::with_capacity(points.len());
 
@@ -81,7 +81,7 @@ fn half_hull(points: Iter<Point>) -> Vec<Point> {
 ///
 /// Examples
 /// ```rust
-/// use geom::{self, Point};
+/// use geomlib::{self, Point};
 /// let (start1, end1) = (Point::new(0.0, 0.0), Point::new(1.0, 1.0));
 /// let seg1 = (&start1, &end1);
 ///
@@ -89,12 +89,12 @@ fn half_hull(points: Iter<Point>) -> Vec<Point> {
 /// let seg2 = (&start2, &end2);
 /// let pt = Point::new(0.5, 0.5);
 ///
-/// let inter = geom::intersection_point(seg1, seg2).unwrap();
+/// let inter = geomlib::intersection_point(seg1, seg2).unwrap();
 /// assert!(inter.is_close(&pt));
 ///
 /// let (start3, end3) = (Point::new(2.0, 0.0), Point::new(2.0, 3.0));
 /// let seg3 = (&start3, &end3);
-/// match geom::intersection_point(seg1, seg3) {
+/// match geomlib::intersection_point(seg1, seg3) {
 ///     None => println!("Segments do not intersect"),
 ///     Some(_) => panic!("This is bad!"),
 /// };

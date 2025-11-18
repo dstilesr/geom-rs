@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [lib]
-name = "geom"
+name = "geomlib"
 path = "src/lib.rs"
 
 [[bin]]
-name = "geom"
+name = "geomlib"
 path = "src/main.rs"
 
 [dependencies]

@@ -4,7 +4,7 @@ use super::core::{self, GeometricObject, display_for_geom};
 ///
 /// Examples
 /// ```rust
-/// use geom::Point;
+/// use geomlib::Point;
 /// let my_point = Point::new(0.2, -7.9);
 /// let (x, y) = my_point.coords();
 /// ```
@@ -77,7 +77,7 @@ impl MultiPoint {
     ///
     /// Example
     /// ```rust
-    /// use geom::{MultiPoint, Point};
+    /// use geomlib::{MultiPoint, Point};
     /// let my_points = MultiPoint::new(vec![Point::new(0.0, 0.0), Point::new(0.0, 1.0)]);
     /// ```
     pub fn new(pts: Vec<Point>) -> Self {
