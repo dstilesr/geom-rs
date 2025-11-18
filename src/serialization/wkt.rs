@@ -51,126 +51,161 @@ fn geom_type_re() -> &'static Regex {
 /// }
 /// ```
 pub fn parse_wkt(raw_str: String) -> GeomResult<GeomWrapper> {
-    match identify_type(&raw_str) {
-        Err(s) => Err(GeometryError::ParsingError(s)),
-        Ok((GeomType::Point, n)) => match parse_point(&raw_str[n..]) {
-            Ok(pt) => Ok(GeomWrapper::Point(pt)),
-            Err(s) => Err(GeometryError::ParsingError(s)),
-        },
-        Ok((GeomType::Polygon, n)) => match parse_polygon(&raw_str[n..]) {
-            Ok(poly) => Ok(GeomWrapper::Polygon(poly)),
-            Err(s) => Err(GeometryError::ParsingError(s)),
-        },
-        Ok((GeomType::MultiPoint, n)) => match parse_multipoint(&raw_str[n..]) {
-            Ok(mp) => Ok(GeomWrapper::MultiPoint(mp)),
-            Err(s) => Err(GeometryError::ParsingError(s)),
-        },
+    let (wrap, trailing) = match identify_type(&raw_str)? {
+        (GeomType::Point, rest) => {
+            let (pt, tail) = parse_point(rest)?;
+            (GeomWrapper::Point(pt), tail)
+        }
+        (GeomType::Polygon, rest) => {
+            let (poly, tail) = parse_polygon(rest)?;
+            (GeomWrapper::Polygon(poly), tail)
+        }
+        (GeomType::MultiPoint, rest) => {
+            let (mp, tail) = parse_multipoint(rest)?;
+            (GeomWrapper::MultiPoint(mp), tail)
+        }
+    };
+    if !trailing.trim().is_empty() {
+        Err(GeometryError::ParsingError(String::from(
+            "Trailing characters after geometry!",
+        )))
+    } else {
+        Ok(wrap)
     }
 }
 
 /// Identifies the type of geometry at the start of a WKT string
-fn identify_type(raw: &str) -> Result<(GeomType, usize), String> {
+fn identify_type<'a>(raw_str: &'a str) -> ParserResult<'a, GeomType> {
     let re = geom_type_re();
-    if let Some(m) = re.find(raw) {
+    if let Some(m) = re.find(raw_str) {
         let trimmed = m.as_str().trim();
         let end = m.end();
         match trimmed {
-            "POLYGON" => Ok((GeomType::Polygon, end)),
-            "POINT" => Ok((GeomType::Point, end)),
-            "MULTIPOINT" => Ok((GeomType::MultiPoint, end)),
-            _ => Err(format!("Unsupported Geometry: {trimmed}")),
+            "POLYGON" => Ok((GeomType::Polygon, &raw_str[end..])),
+            "POINT" => Ok((GeomType::Point, &raw_str[end..])),
+            "MULTIPOINT" => Ok((GeomType::MultiPoint, &raw_str[end..])),
+            _ => Err(GeometryError::ParsingError(format!(
+                "Unsupported Geometry: {trimmed}"
+            ))),
         }
     } else {
-        Err(String::from("Could not parse shape type"))
+        Err(GeometryError::ParsingError(String::from(
+            "Could not parse shape type",
+        )))
     }
 }
 
 /// Parse a point coordinates (after removing the type prefix from the string)
-fn parse_point(raw: &str) -> Result<Point, String> {
+fn parse_point<'a>(raw: &'a str) -> ParserResult<'a, Point> {
     let re = coord_pair_re();
-    let trimmed = raw.trim();
-    if !trimmed.starts_with("(") {
-        return Err(String::from("Expected '(' to introduce coordinates"));
-    }
-    let trimmed = &trimmed[1..];
+    let mut trimmed = raw.trim();
+    trimmed = match trimmed.strip_prefix("(") {
+        Some(s) => s,
+        None => {
+            return Err(GeometryError::ParsingError(String::from(
+                "Expected '(' to introduce coordinates",
+            )));
+        }
+    };
 
     if let Some(cap) = re.captures(trimmed) {
         let x_str = cap.get(1).unwrap().as_str();
         let y_str = cap.get(2).unwrap().as_str();
-        let suffix = &trimmed[cap.get_match().end()..];
-        if !(suffix.len() == 1 && suffix.starts_with(")")) {
-            return Err(String::from("Expected ')' to close coordinates"));
-        }
+        trimmed = &trimmed[cap.get_match().end()..];
 
-        Ok(Point::new(
-            x_str.parse::<f64>().unwrap(),
-            y_str.parse::<f64>().unwrap(),
-        ))
+        match trimmed.strip_prefix(")") {
+            None => {
+                return Err(GeometryError::ParsingError(String::from(
+                    "Expected ')' to close coordinates",
+                )));
+            }
+            Some(s) => {
+                if s.trim().is_empty() {
+                    let pt =
+                        Point::new(x_str.parse::<f64>().unwrap(), y_str.parse::<f64>().unwrap());
+                    Ok((pt, s))
+                } else {
+                    Err(GeometryError::ParsingError(String::from(
+                        "Trailing characters - could not parse point",
+                    )))
+                }
+            }
+        }
     } else {
-        return Err(String::from("Could not parse coordinates"));
+        return Err(GeometryError::ParsingError(String::from(
+            "Could not parse coordinates",
+        )));
     }
 }
 
 /// Parse a list of points from a string with type prefix removed
-fn parse_multipoint(raw_str: &str) -> Result<MultiPoint, String> {
+fn parse_multipoint<'a>(raw_str: &'a str) -> ParserResult<'a, MultiPoint> {
     let trimmed = raw_str.trim();
-    match parse_coordinate_list(trimmed) {
-        Ok((pts, n)) => {
-            if trimmed[n..].len() > 0 {
-                return Err(String::from("Trailing cheracters!"));
-            }
-            Ok(MultiPoint::new(pts))
-        }
-        Err(e) => Err(e),
+    let (coords, mut rest) = parse_coordinate_list(trimmed)?;
+    rest = rest.trim();
+    if !rest.is_empty() {
+        Err(GeometryError::ParsingError(String::from(
+            "Trailing characters after multipoint",
+        )))
+    } else {
+        Ok((MultiPoint::new(coords), rest))
     }
 }
 
 // Parse a list of coordinate pairs (points) from the start of a string
-fn parse_coordinate_list(raw_str: &str) -> Result<(Vec<Point>, usize), String> {
+fn parse_coordinate_list<'a>(raw_str: &'a str) -> ParserResult<'a, Vec<Point>> {
     let re = coord_pair_re();
-    let mut end_idx: usize = 0;
-    if !raw_str.starts_with("(") {
-        return Err(String::from("Expected '(' to start list of coordinates"));
-    }
-    end_idx += 1;
+
+    let mut trimmed = match raw_str.trim().strip_prefix("(") {
+        None => {
+            return Err(GeometryError::ParsingError(String::from(
+                "Expected '(' to start list of coordinates",
+            )));
+        }
+        Some(s) => s,
+    };
     let mut pts = Vec::new();
-    while let Some(cap) = re.captures(&raw_str[end_idx..]) {
+    while let Some(cap) = re.captures(trimmed) {
         let x = cap.get(1).unwrap().as_str().parse::<f64>().unwrap();
         let y = cap.get(2).unwrap().as_str().parse::<f64>().unwrap();
         pts.push(Point::new(x, y));
-        end_idx += cap.get_match().end();
 
-        if raw_str[end_idx..].starts_with(",") {
-            // Trailing comma - expect more pairs
-            end_idx += 1;
-        } else {
-            // No trailing comma - list should be over
-            break;
+        trimmed = &trimmed[cap.get_match().end()..];
+        match trimmed.strip_prefix(",") {
+            None => break,
+            Some(s) => {
+                trimmed = s;
+            }
         }
     }
-    if !raw_str[end_idx..].starts_with(")") {
-        return Err(String::from("Expected ')' to close coordinates"));
+    match trimmed.trim().strip_prefix(")") {
+        None => Err(GeometryError::ParsingError(String::from(
+            "Expected ')' to close coordinates",
+        ))),
+        Some(s) => Ok((pts, s)),
     }
-    Ok((pts, end_idx + 1))
 }
 
 // Parse a polygon from the given wkt string with type prefix removed
-fn parse_polygon(raw_str: &str) -> Result<Polygon, String> {
-    if !raw_str.starts_with("(") {
-        return Err(String::from("Expected '(' to start coordinate lists"));
-    }
-    match parse_coordinate_list(&raw_str[1..]) {
-        Err(err) => Err(err),
-        Ok((points, end)) => {
-            let suffix_trim = raw_str[1 + end..].trim();
-            if (!suffix_trim.starts_with(")")) || suffix_trim.len() != 1 {
-                return Err(String::from("Expected ')' to close polygon"));
-            }
-            match Polygon::new(points) {
-                Err(err) => Err(err.to_string()),
-                Ok(poly) => Ok(poly),
-            }
+fn parse_polygon<'a>(raw_str: &'a str) -> ParserResult<'a, Polygon> {
+    let mut trimmed = raw_str.trim();
+    match trimmed.strip_prefix("(") {
+        None => {
+            return Err(GeometryError::ParsingError(String::from(
+                "Expected '(' to start polygon coordinates",
+            )));
         }
+        Some(s) => {
+            trimmed = s;
+        }
+    };
+    let (outer_ring, mut rest) = parse_coordinate_list(trimmed)?;
+    rest = rest.trim();
+    match rest.strip_prefix(")") {
+        None => Err(GeometryError::ParsingError(String::from(
+            "Expected ')' to close polygon",
+        ))),
+        Some(s) => Ok((Polygon::new(outer_ring)?, s)),
     }
 }
 
@@ -312,22 +347,14 @@ mod tests {
     #[test]
     fn test_parse_coord_list_valid() {
         let raw_str = "(0 1, 0.9 -2.5, 9 0.001)";
-        match parse_coordinate_list(raw_str) {
-            Err(err) => panic!("{err}"),
-            Ok((pts, n)) => {
-                assert_eq!(pts.len(), 3);
-                assert_eq!(raw_str.len(), n)
-            }
-        }
+        let (pts, rest) = parse_coordinate_list(raw_str).unwrap();
+        assert_eq!(pts.len(), 3);
+        assert!(rest.is_empty());
 
         let raw_str = "(0 1, 0.9 -2.5, 9 0.001))END";
-        match parse_coordinate_list(raw_str) {
-            Err(err) => panic!("{err}"),
-            Ok((pts, n)) => {
-                assert_eq!(pts.len(), 3);
-                assert!(raw_str[n..].starts_with(")END"));
-            }
-        }
+        let (pts, rest) = parse_coordinate_list(raw_str).unwrap();
+        assert_eq!(pts.len(), 3);
+        assert_eq!(rest, ")END");
     }
 
     #[test]
