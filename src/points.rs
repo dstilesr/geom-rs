@@ -61,6 +61,15 @@ impl Point {
     pub fn coords(&self) -> (f64, f64) {
         (self.x, self.y)
     }
+
+    /// Rotate the point around the given axis by the given angle
+    pub fn rotate_around(&self, other: &Self, angle: f64) -> Self {
+        let x = self.x - other.x;
+        let y = self.y - other.y;
+        let new_x = angle.cos() * x - angle.sin() * y;
+        let new_y = angle.sin() * x + angle.cos() * y;
+        Self::new(new_x + other.x, new_y + other.y)
+    }
 }
 
 impl GeometricObject for Point {
@@ -155,6 +164,7 @@ mod tests {
     use super::*;
     use rand::rng;
     use rand::seq::SliceRandom;
+    use std::f64::consts;
 
     #[test]
     fn test_lex_comparison() {
@@ -232,5 +242,20 @@ mod tests {
 
             assert_eq!((x, y), (pt.x, pt.y));
         }
+    }
+
+    #[test]
+    fn test_rotate() {
+        let original = Point::new(0.0, 0.0);
+        let axis = Point::new(0.5, 0.5);
+        let opposite = Point::new(1.0, 1.0);
+        let rotated = original.rotate_around(&axis, consts::PI);
+        assert!(rotated.is_close(&opposite));
+
+        let rotated2 = rotated.rotate_around(&Point::new(0.0, 0.0), consts::PI);
+        assert!(rotated2.is_close(&Point::new(-1.0, -1.0)));
+
+        let rotated3 = rotated2.rotate_around(&Point::new(0.0, 0.0), consts::FRAC_PI_2);
+        assert!(rotated3.is_close(&Point::new(1.0, -1.0)));
     }
 }
