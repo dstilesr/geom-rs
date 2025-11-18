@@ -79,10 +79,6 @@ impl Polygon {
             let turn = direction(p1, p2, p3);
 
             if initial != turn {
-                println!(
-                    "Turn mismatch: {:?} - {:?} - Points: {:?} {:?} {:?}",
-                    initial, turn, p1, p2, p3
-                );
                 return false;
             }
         }
