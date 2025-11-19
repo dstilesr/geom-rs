@@ -9,6 +9,11 @@ const GEOM_TYPE: &str = r"^\s*[A-Z]+\s*";
 static COORD_PAIR_RE: OnceLock<Regex> = OnceLock::new();
 static GEOM_TYPE_RE: OnceLock<Regex> = OnceLock::new();
 
+/// Represents a function to parse an element from a WKT string. Parser functions
+/// will parse an object from the start of a string and return the item along with the
+/// rest of the string.
+type ItemParser<'a, T> = fn(&'a str) -> ParserResult<'a, T>;
+
 #[derive(Debug)]
 enum GeomType {
     Polygon,
@@ -16,12 +21,31 @@ enum GeomType {
     MultiPoint,
 }
 
+/// Macro to verify the starting characters of a string.
+///
+/// If the `src` starts with the given pattern `pat`, returns the string slice with the
+/// pattern stripped from the start. Otherwise, return a parsing error from the caller
+/// function.
+macro_rules! check_string_prefix {
+    ($src:ident, $pat:literal) => {
+        match $src.trim_start().strip_prefix($pat) {
+            None => {
+                return Err(GeometryError::ParsingError(format!(
+                    "Expected string with '{}' prefix",
+                    $pat
+                )))
+            }
+            Some(s) => s,
+        }
+    };
+}
+
 /// Get coordinate pair regex once to avoid recompilation (thread-safe)
 fn coord_pair_re() -> &'static Regex {
     COORD_PAIR_RE.get_or_init(|| Regex::new(COORD_PAIR).unwrap())
 }
 
-// Get geometry type regex once to avoid recompilation (thread-safe)
+/// Get geometry type regex once to avoid recompilation (thread-safe)
 fn geom_type_re() -> &'static Regex {
     GEOM_TYPE_RE.get_or_init(|| Regex::new(GEOM_TYPE).unwrap())
 }
@@ -94,45 +118,71 @@ fn identify_type<'a>(raw_str: &'a str) -> ParserResult<'a, GeomType> {
     }
 }
 
-/// Parse a point coordinates (after removing the type prefix from the string)
-fn parse_point<'a>(raw: &'a str) -> ParserResult<'a, Point> {
-    let re = coord_pair_re();
-    let mut trimmed = raw.trim();
-    trimmed = match trimmed.strip_prefix("(") {
-        Some(s) => s,
-        None => {
-            return Err(GeometryError::ParsingError(String::from(
-                "Expected '(' to introduce coordinates",
-            )));
+/// Parse a series of items (comma-separated) from the given string.
+///
+/// Takes a function to parse an individual item and uses it to parse a parenthesis-enclosed list
+/// of comma-separated items of this type. Returns the results as a vector.
+fn parse_series<'a, T>(parse_fn: ItemParser<'a, T>, source: &'a str) -> ParserResult<'a, Vec<T>> {
+    let mut trimmed = check_string_prefix!(source, '(');
+    let mut items = Vec::new();
+    let mut has_next = true;
+
+    while has_next {
+        let (item, rest) = parse_fn(trimmed)?;
+        items.push(item);
+        trimmed = rest;
+
+        // Separator -  expect more values
+        if trimmed.starts_with(',') {
+            trimmed = check_string_prefix!(trimmed, ',').trim_start();
+        } else {
+            has_next = false;
         }
-    };
+    }
+
+    // End of list - parenthesis
+    trimmed = check_string_prefix!(trimmed, ')');
+    Ok((items, trimmed))
+}
+
+/// Parse a point coordinates (after removing the type prefix from the string)
+fn parse_point<'a>(raw_str: &'a str) -> ParserResult<'a, Point> {
+    let re = coord_pair_re();
+    let mut trimmed = raw_str.trim_start();
+    trimmed = check_string_prefix!(trimmed, '(');
 
     if let Some(cap) = re.captures(trimmed) {
         let x_str = cap.get(1).unwrap().as_str();
         let y_str = cap.get(2).unwrap().as_str();
         trimmed = &trimmed[cap.get_match().end()..];
 
-        match trimmed.strip_prefix(")") {
-            None => {
+        trimmed = check_string_prefix!(trimmed, ')');
+        let pt = match (x_str.parse::<f64>(), y_str.parse::<f64>()) {
+            (Ok(x), Ok(y)) => Point::new(x, y),
+            _ => {
                 return Err(GeometryError::ParsingError(String::from(
-                    "Expected ')' to close coordinates",
+                    "Unable to parse coordinate values",
                 )));
             }
-            Some(s) => {
-                let pt = Point::new(x_str.parse::<f64>().unwrap(), y_str.parse::<f64>().unwrap());
-                Ok((pt, s))
-            }
-        }
+        };
+        Ok((pt, trimmed))
     } else {
-        return Err(GeometryError::ParsingError(String::from(
+        Err(GeometryError::ParsingError(String::from(
             "Could not parse coordinates",
-        )));
+        )))
     }
 }
 
 /// Parse a list of points from a string with type prefix removed
 fn parse_multipoint<'a>(raw_str: &'a str) -> ParserResult<'a, MultiPoint> {
-    let trimmed = raw_str.trim();
+    let trimmed = raw_str.trim_start();
+    if trimmed.starts_with("((") {
+        // Points enclosed in parentheses
+        let (pts, rest) = parse_series(parse_point, trimmed)?;
+        return Ok((MultiPoint::new(pts), rest));
+    }
+
+    // Points not enclosed in parentheses
     let (coords, mut rest) = parse_coordinate_list(trimmed)?;
     rest = rest.trim();
     if !rest.is_empty() {
@@ -144,18 +194,12 @@ fn parse_multipoint<'a>(raw_str: &'a str) -> ParserResult<'a, MultiPoint> {
     }
 }
 
-/// Parse a list of coordinate pairs (points) from the start of a string
+/// Parse a list of coordinate pairs (points) not enclosed in parentheses from the
+/// start of a string
 fn parse_coordinate_list<'a>(raw_str: &'a str) -> ParserResult<'a, Vec<Point>> {
     let re = coord_pair_re();
 
-    let mut trimmed = match raw_str.trim().strip_prefix("(") {
-        None => {
-            return Err(GeometryError::ParsingError(String::from(
-                "Expected '(' to start list of coordinates",
-            )));
-        }
-        Some(s) => s,
-    };
+    let mut trimmed = check_string_prefix!(raw_str, '(');
     let mut pts = Vec::new();
     while let Some(cap) = re.captures(trimmed) {
         let x = cap.get(1).unwrap().as_str().parse::<f64>().unwrap();
@@ -170,7 +214,7 @@ fn parse_coordinate_list<'a>(raw_str: &'a str) -> ParserResult<'a, Vec<Point>> {
             }
         }
     }
-    match trimmed.trim().strip_prefix(")") {
+    match trimmed.trim().strip_prefix(')') {
         None => Err(GeometryError::ParsingError(String::from(
             "Expected ')' to close coordinates",
         ))),
@@ -180,25 +224,10 @@ fn parse_coordinate_list<'a>(raw_str: &'a str) -> ParserResult<'a, Vec<Point>> {
 
 // Parse a polygon from the given wkt string with type prefix removed
 fn parse_polygon<'a>(raw_str: &'a str) -> ParserResult<'a, Polygon> {
-    let mut trimmed = raw_str.trim();
-    match trimmed.strip_prefix("(") {
-        None => {
-            return Err(GeometryError::ParsingError(String::from(
-                "Expected '(' to start polygon coordinates",
-            )));
-        }
-        Some(s) => {
-            trimmed = s;
-        }
-    };
+    let trimmed = check_string_prefix!(raw_str, '(');
     let (outer_ring, mut rest) = parse_coordinate_list(trimmed)?;
-    rest = rest.trim();
-    match rest.strip_prefix(")") {
-        None => Err(GeometryError::ParsingError(String::from(
-            "Expected ')' to close polygon",
-        ))),
-        Some(s) => Ok((Polygon::new(outer_ring)?, s)),
-    }
+    rest = check_string_prefix!(rest, ')');
+    Ok((Polygon::new(outer_ring)?, rest))
 }
 
 #[cfg(test)]
@@ -460,6 +489,21 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_multipoint_valid_parentheses() {
+        match parse_wkt(String::from("MULTIPOINT((0 0), (1 0), (0.5 0.5), (0 1))")) {
+            Err(err) => panic!("Could not parse multipoint: {err}"),
+            Ok(GeomWrapper::MultiPoint(mp)) => {
+                assert_eq!(mp.points.len(), 4);
+                assert!(mp.points[0].is_close(&Point::new(0.0, 0.0)));
+                assert!(mp.points[1].is_close(&Point::new(1.0, 0.0)));
+                assert!(mp.points[2].is_close(&Point::new(0.5, 0.5)));
+                assert!(mp.points[3].is_close(&Point::new(0.0, 1.0)));
+            }
+            Ok(_) => panic!("Expected multipoint!"),
+        }
+    }
+
+    #[test]
     fn test_parse_multipoint_random() {
         let total_pts = 500;
         let mp1 = MultiPoint::new(get_random_points(total_pts));
@@ -479,7 +523,7 @@ mod tests {
     #[test]
     fn test_parse_multipoint_invalid() {
         if let Ok(_) = parse_wkt(String::from("MULTIPOINT((0 0, 1 0, 0.5 0.5, 0 1))")) {
-            panic!("Parsed invalid multipoint (Invalid parentheses number)!")
+            panic!("Parsed invalid multipoint (Invalid parentheses)!")
         }
 
         if let Ok(_) = parse_wkt(String::from("MULTIPOINT(0 0, 1 0, 0.5 0.5, 0 1))")) {
@@ -488,6 +532,10 @@ mod tests {
 
         if let Ok(_) = parse_wkt(String::from("MULTIPOINT(0 0 9.0, 1 0 -1, 0.5 0.5 0.2)")) {
             panic!("Parsed invalid multipoint (invalid dimension)!")
+        }
+
+        if let Ok(_) = parse_wkt(String::from("MULTIPOINT((0 0 9.0), 1 -1, (0.5 0.5))")) {
+            panic!("Parsed invalid multipoint (inconsistent parentheses)!")
         }
     }
 }
