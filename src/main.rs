@@ -5,6 +5,8 @@ mod points;
 mod polygons;
 pub mod serialization;
 
+use crate::core::GeometryError;
+
 pub use self::ops::*;
 pub use self::points::*;
 pub use self::polygons::*;
@@ -27,8 +29,11 @@ struct Cli {
 enum AppCommands {
     /// Parse a WKT string given from the CLI
     ParseCli {
-        #[arg(short, long)]
+        #[arg(short, long, default_value = "")]
         wkt: String,
+
+        #[arg(short, long, default_value = "")]
+        file: String,
     },
 
     /// Convex Hull computation.
@@ -87,8 +92,16 @@ fn main() {
 /// Run the CLI command
 fn run(cli: Cli) -> core::GeomResult<()> {
     match cli.command {
-        AppCommands::ParseCli { wkt } => {
-            return cli_commands::parse_show_detail(wkt);
+        AppCommands::ParseCli { wkt, file } => {
+            let source = match get_string(wkt, file) {
+                Ok(s) => s,
+                _ => {
+                    return Err(GeometryError::OperationError(String::from(
+                        "Unable to get WKT to parse",
+                    )));
+                }
+            };
+            return cli_commands::parse_show_detail(source);
         }
         AppCommands::ConvexHull {
             file,

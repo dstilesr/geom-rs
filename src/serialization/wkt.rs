@@ -339,7 +339,7 @@ mod tests {
             _ => panic!("Parsed invalid point (1 coordinate)"),
         }
 
-        match parse_wkt(String::from("POINT(-0.9 1.75 9.0))")) {
+        match parse_wkt(String::from("POINT(-0.9 1.75 9.0)")) {
             Err(_) => (),
             _ => panic!("Parsed invalid point (3 coordinates)"),
         }
