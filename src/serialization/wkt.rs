@@ -119,15 +119,8 @@ fn parse_point<'a>(raw: &'a str) -> ParserResult<'a, Point> {
                 )));
             }
             Some(s) => {
-                if s.trim().is_empty() {
-                    let pt =
-                        Point::new(x_str.parse::<f64>().unwrap(), y_str.parse::<f64>().unwrap());
-                    Ok((pt, s))
-                } else {
-                    Err(GeometryError::ParsingError(String::from(
-                        "Trailing characters - could not parse point",
-                    )))
-                }
+                let pt = Point::new(x_str.parse::<f64>().unwrap(), y_str.parse::<f64>().unwrap());
+                Ok((pt, s))
             }
         }
     } else {
