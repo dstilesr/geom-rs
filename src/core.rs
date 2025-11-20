@@ -7,6 +7,10 @@ const RTOL: f64 = 1e-9;
 /// Trait with common functionality for all geometric objects
 pub trait GeometricObject {
     fn wkt(&self) -> String;
+
+    fn area(&self) -> f64 {
+        return 0.0;
+    }
 }
 
 /// Macro to implement the Display trait for Geometric Object types

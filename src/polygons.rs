@@ -97,11 +97,6 @@ impl Polygon {
         val
     }
 
-    /// Compute the area of the polygon using the "Shoelace" sum method.
-    pub fn area(&self) -> f64 {
-        self.shoelace().abs() / 2.0
-    }
-
     /// Determine the orientation of the polygon's vertices with the shoelace method.
     pub fn orientation(&self) -> Orientation {
         if self.shoelace() > 0.0 {
@@ -133,6 +128,11 @@ impl GeometricObject for Polygon {
         let stripped = outer_ring.strip_suffix(", ").unwrap();
 
         format!("POLYGON(({}))", stripped)
+    }
+
+    /// Compute the area of the polygon using the "Shoelace" sum method.
+    fn area(&self) -> f64 {
+        self.shoelace().abs() / 2.0
     }
 }
 
