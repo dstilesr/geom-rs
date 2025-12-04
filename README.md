@@ -15,7 +15,7 @@ Here is a wishlist of features I have implemented / would like to implement *eve
   - [x] Point
   - [x] MultiPoint
   - [x] Polygon
-  - [ ] LineString
+  - [x] LineString
   - [ ] MultiPolygon
   - [ ] GeometryCollection
 
