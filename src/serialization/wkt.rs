@@ -19,6 +19,7 @@ enum GeomType {
     Polygon,
     Point,
     MultiPoint,
+    LineString,
 }
 
 /// Macro to verify the starting characters of a string.
@@ -87,6 +88,10 @@ pub fn parse_wkt(raw_str: String) -> GeomResult<GeomWrapper> {
             let (mp, tail) = parse_multipoint(rest)?;
             (GeomWrapper::MultiPoint(mp), tail)
         }
+        (GeomType::LineString, rest) => {
+            let (ls, tail) = parse_linestring(rest)?;
+            (GeomWrapper::LineString(ls), tail)
+        }
     };
     if !trailing.trim().is_empty() {
         Err(GeometryError::ParsingError(String::from(
@@ -107,6 +112,7 @@ fn identify_type<'a>(raw_str: &'a str) -> ParserResult<'a, GeomType> {
             "POLYGON" => Ok((GeomType::Polygon, &raw_str[end..])),
             "POINT" => Ok((GeomType::Point, &raw_str[end..])),
             "MULTIPOINT" => Ok((GeomType::MultiPoint, &raw_str[end..])),
+            "LINESTRING" => Ok((GeomType::LineString, &raw_str[end..])),
             _ => Err(GeometryError::ParsingError(format!(
                 "Unsupported Geometry: {trimmed}"
             ))),
@@ -191,6 +197,22 @@ fn parse_multipoint<'a>(raw_str: &'a str) -> ParserResult<'a, MultiPoint> {
         )))
     } else {
         Ok((MultiPoint::new(coords), rest))
+    }
+}
+
+/// Parse a linestring from a string with type prefix removed
+fn parse_linestring<'a>(raw_str: &'a str) -> ParserResult<'a, LineString> {
+    let trimmed = raw_str.trim_start();
+
+    // Points not enclosed in parentheses
+    let (coords, mut rest) = parse_coordinate_list(trimmed)?;
+    rest = rest.trim();
+    if !rest.is_empty() {
+        Err(GeometryError::ParsingError(String::from(
+            "Trailing characters after multipoint",
+        )))
+    } else {
+        Ok((LineString::new(coords)?, rest))
     }
 }
 

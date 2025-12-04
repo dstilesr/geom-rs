@@ -27,6 +27,15 @@ pub fn parse_show_detail(input: String) -> GeomResult<()> {
             println!("The multipoint contains {} total points.", mp.points.len());
             Ok(())
         }
+
+        Ok(GeomWrapper::LineString(ls)) => {
+            println!("Parsed a Geometry of Type LineString!");
+            println!(
+                "The line string contains {} total points.",
+                ls.total_vertices()
+            );
+            Ok(())
+        }
         Ok(GeomWrapper::Polygon(poly)) => {
             println!("Parsed a Geometry of Type Polygon!");
             println!(
@@ -59,6 +68,7 @@ pub fn compute_convex_hull(input: String, output_path: Option<&str>) -> GeomResu
             poly.outer.pop();
             poly.outer
         }
+        GeomWrapper::LineString(ls) => ls.points,
     };
     let hull = convex_hull(&points);
     match (hull, output_path) {

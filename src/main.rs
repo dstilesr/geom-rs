@@ -1,5 +1,6 @@
 mod cli_commands;
 mod core;
+mod linestring;
 mod ops;
 mod points;
 mod polygons;
@@ -7,6 +8,7 @@ pub mod serialization;
 
 use crate::core::GeometryError;
 
+pub use self::linestring::*;
 pub use self::ops::*;
 pub use self::points::*;
 pub use self::polygons::*;

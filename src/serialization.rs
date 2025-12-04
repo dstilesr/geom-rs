@@ -10,6 +10,7 @@ pub enum GeomWrapper {
     Polygon(Polygon),
     Point(Point),
     MultiPoint(MultiPoint),
+    LineString(LineString),
 }
 
 type ParserResult<'a, T> = GeomResult<(T, &'a str)>;
